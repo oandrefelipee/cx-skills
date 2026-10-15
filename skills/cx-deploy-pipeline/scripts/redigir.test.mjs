@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 // Testes do redigir.mjs, sem dependências: node redigir.test.mjs (saída 1 se algum falhar).
 import { redigir } from "./redigir.mjs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, symlinkSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const devemMascarar = [
   ["Authorization com Bearer", "Authorization: Bearer abcdef123456", "abcdef123456"],
   ["authorization com Basic", "authorization: Basic dXNlcjpwYXNz", "dXNlcjpwYXNz"],
   ["Circle-Token", "Circle-Token: abc123def456", "abc123def456"],
   ["x-api-key", "curl -H 'x-api-key: k3y-v4lue-9' https://api.exemplo.dev", "k3y-v4lue-9"],
+  ["bearer minúsculo", "bearer abc123def456", "abc123def456"],
   ["Bearer solto", "usando Bearer abc.def-ghi_jkl123 no teste", "abc.def-ghi_jkl123"],
   ["Basic solto", "header Basic dXNlcjpwYXNzd29yZA== enviado", "dXNlcjpwYXNzd29yZA=="],
   ["senha com / na URL", "postgres://user:pa/ss@db:5432/x", "pa/ss"],
@@ -34,6 +40,24 @@ for (const [nome, entrada] of naoMudam) {
   const ok = saida === entrada && total === 0;
   if (!ok) falhas++;
   console.log(`${ok ? "ok   " : "FALHA"}  mantém ${nome}${ok ? "" : `  → ${saida}`}`);
+}
+// --extra com grupos: nada do segredo pode sobrar.
+{
+  const { saida } = redigir("xxsegredoxx", "(seg)(redo)");
+  const ok = saida === "xx[REDIGIDO]xx";
+  if (!ok) falhas++;
+  console.log(`${ok ? "ok   " : "FALHA"}  --extra com grupos troca o trecho inteiro${ok ? "" : `  → ${saida}`}`);
+}
+// Execução por symlink (como a skill é instalada): a saída tem de sair mascarada.
+{
+  const pasta = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "redigir-link-"));
+  const link = join(pasta, "redigir.mjs");
+  symlinkSync(join(dirname(fileURLToPath(import.meta.url)), "redigir.mjs"), link);
+  const r = spawnSync(process.execPath, [link], { input: "Authorization: Bearer abcdef123456\n", encoding: "utf8" });
+  rmSync(pasta, { recursive: true, force: true });
+  const ok = r.status === 0 && r.stdout.includes("[REDIGIDO]") && !r.stdout.includes("abcdef123456");
+  if (!ok) falhas++;
+  console.log(`${ok ? "ok   " : "FALHA"}  execução por symlink mascara${ok ? "" : `  → status ${r.status} ${r.stdout}${r.stderr}`}`);
 }
 console.log(falhas ? `${falhas} falha(s).` : "Todos os casos passaram.");
 process.exit(falhas ? 1 : 0);
