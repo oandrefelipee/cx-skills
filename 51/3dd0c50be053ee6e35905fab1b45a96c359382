@@ -1,0 +1,23 @@
+skills/cx-actionable-ui/SKILL.md
+  s_635d6e7dfccdc6::t_b777ac7660da4b 85-94
+skills/cx-actionable-ui/references/anti-slop.md
+  s_635d6e7dfccdc6::t_fba708eee4eb86 47-56
+skills/cx-actionable-ui/workflows/00-planejar-blocos.md
+  s_635d6e7dfccdc6::t_0384f0d0d2cdef 22-23,25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "513dd0c50be053ee6e35905fab1b45a96c359382",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
