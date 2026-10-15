@@ -1,0 +1,21 @@
+README.md
+  s_635d6e7dfccdc6::t_098d20d286e63e 7,20,48-79,96-103
+docs/proposta-cx-deploy-pipeline.md
+  s_635d6e7dfccdc6::t_35d919b364ce83 244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9695bb956e7137c2c65fcfc4a5e3fe18691aa49",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
