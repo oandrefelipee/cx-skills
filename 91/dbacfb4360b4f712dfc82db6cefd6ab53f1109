@@ -1,0 +1,37 @@
+skills/cx-actionable-ui/workflows/06-acrescentar-ao-guia.md
+  s_635d6e7dfccdc6::t_45efccc00b1fb6 3,7,11-12,14,16-44,50-51,55
+skills/cx-actionable-ui/SKILL.md
+  s_635d6e7dfccdc6::t_7a352d35b8245f 3,8,10,12,14-21,23,25,27,29-31,33,39,41-44,48-52,56-66,76-77,81,85
+skills/cx-actionable-ui/references/checklist.md
+  s_635d6e7dfccdc6::t_168054dae5a909 3
+skills/cx-actionable-ui/references/guia.html
+  s_635d6e7dfccdc6::t_7237e5ec40598b 8-13,113
+skills/cx-actionable-ui/references/techniques.md
+  s_635d6e7dfccdc6::t_3a8ad53a4232d5 1,3
+skills/cx-actionable-ui/workflows/00-planejar-blocos.md
+  s_635d6e7dfccdc6::t_20d7d494fc54b9 14-16
+skills/cx-actionable-ui/workflows/01-auditar-tela.md
+  s_635d6e7dfccdc6::t_238f6583cf1bc5 14-15
+skills/cx-actionable-ui/workflows/02-listar-excesso-de-texto.md
+  s_635d6e7dfccdc6::t_25a536012ffa65 13-15,18
+skills/cx-actionable-ui/workflows/03-aplicar-tecnicas.md
+  s_635d6e7dfccdc6::t_eaea291751dbe8 5
+skills/cx-actionable-ui/workflows/04-reescrever-microcopy.md
+  s_635d6e7dfccdc6::t_6bef6eb86436e8 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "91dbacfb4360b4f712dfc82db6cefd6ab53f1109",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
