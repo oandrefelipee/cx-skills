@@ -241,7 +241,7 @@ Cada campo é um comando do projeto (preferível: um script do `package.json`) o
    - a skill chama `gh` direto e ignora o projeto;
    - cada projeto escreve o seu do zero.
 4. **Trem de merge ou merge queue do GitHub?**
-   - **(Recomendado)** a skill ensina os dois e o adaptador escolhe; no PrivateLab segue o trem (`train/*`), porque a merge queue não está disponível no plano atual;
+   - **(Recomendado)** a skill ensina os dois e o adaptador escolhe; no primeiro projeto segue o trem (`train/*`), porque a merge queue não está disponível no plano atual;
    - só merge queue;
    - merge PR a PR, sem lote.
 5. **Rollback com migração de banco:**
