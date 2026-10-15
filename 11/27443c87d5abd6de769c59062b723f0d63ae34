@@ -1,0 +1,45 @@
+README.md
+  s_635d6e7dfccdc6::t_64039f54c0b4ab 1-23
+skills/cx-actionable-ui/SKILL.md
+  s_635d6e7dfccdc6::t_04979fd02c2ce4 1-63
+skills/cx-actionable-ui/references/adaptador-modelo.md
+  s_635d6e7dfccdc6::t_3a3a6b0af31640 1-34
+skills/cx-actionable-ui/references/checklist.md
+  s_635d6e7dfccdc6::t_82c7baf5f35732 1-17
+skills/cx-actionable-ui/references/guia.html
+  s_635d6e7dfccdc6::t_b4b5b4b9ced764 1-1551
+skills/cx-actionable-ui/references/livros.md
+  s_635d6e7dfccdc6::t_bf2f4359e2d945 1-40
+skills/cx-actionable-ui/references/techniques.md
+  s_635d6e7dfccdc6::t_e390109b0be362 1-43
+skills/cx-actionable-ui/references/tone-matrix.md
+  s_635d6e7dfccdc6::t_51570ac41630f1 1-25
+skills/cx-actionable-ui/workflows/01-auditar-tela.md
+  s_635d6e7dfccdc6::t_75aa87094bf670 1-16
+skills/cx-actionable-ui/workflows/02-listar-excesso-de-texto.md
+  s_635d6e7dfccdc6::t_ebc2b6b898a01c 1-18
+skills/cx-actionable-ui/workflows/03-aplicar-tecnicas.md
+  s_635d6e7dfccdc6::t_bb3dfa523db85c 1-13
+skills/cx-actionable-ui/workflows/04-reescrever-microcopy.md
+  s_635d6e7dfccdc6::t_2997654a966617 1-16
+skills/cx-actionable-ui/workflows/05-qa-visual.md
+  s_635d6e7dfccdc6::t_cbbdd5162591e3 1-13
+skills/cx-actionable-ui/workflows/06-acrescentar-ao-guia.md
+  s_635d6e7dfccdc6::t_df4525ce0cec71 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1127443c87d5abd6de769c59062b723f0d63ae34",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
