@@ -1,0 +1,24 @@
+skills/cx-actionable-ui/scripts/wireframe-ascii.mjs
+  s_635d6e7dfccdc6::t_45625b7374d747 1-135
+  s_635d6e7dfccdc6::t_8827223e355120 136-138
+skills/cx-actionable-ui/scripts/contar-palavras.mjs
+  s_635d6e7dfccdc6::t_f8e91f7e5681cd 1-180
+skills/cx-actionable-ui/scripts/checar-capturas.mjs
+  s_635d6e7dfccdc6::t_dfc6249128ccc7 1-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "271973aa787775d2ffc40183d0a7211376525598",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
