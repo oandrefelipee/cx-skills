@@ -1,0 +1,39 @@
+skills/cx-deploy-pipeline/assets/adaptador-exemplo.json
+  s_635d6e7dfccdc6::t_ddec0d6969db3c 1-48
+skills/cx-deploy-pipeline/assets/exemplo-relatorio.html
+  s_635d6e7dfccdc6::t_aca43e3d82904d 1-75
+skills/cx-deploy-pipeline/assets/exemplo-relatorio.json
+  s_635d6e7dfccdc6::t_b945977704a98f 1-36
+skills/cx-deploy-pipeline/scripts/_adaptador.mjs
+  s_635d6e7dfccdc6::t_c3f6e0c1db3812 1-74
+skills/cx-deploy-pipeline/scripts/checar-config.mjs
+  s_635d6e7dfccdc6::t_99d4dfaee98856 1-113
+skills/cx-deploy-pipeline/scripts/checar-health.mjs
+  s_635d6e7dfccdc6::t_e68b267bec171d 1-78
+skills/cx-deploy-pipeline/scripts/checar-links.mjs
+  s_635d6e7dfccdc6::t_83c2a0934835cb 1-42
+skills/cx-deploy-pipeline/scripts/ci-status.mjs
+  s_635d6e7dfccdc6::t_6dac7101698ad9 1-93
+skills/cx-deploy-pipeline/scripts/preflight-disco.mjs
+  s_635d6e7dfccdc6::t_ed7e3e29d063e8 1-62
+skills/cx-deploy-pipeline/scripts/redigir.mjs
+  s_635d6e7dfccdc6::t_557f61b93942d7 1-57
+skills/cx-deploy-pipeline/scripts/relatorio-pr.mjs
+  s_635d6e7dfccdc6::t_0778e3f706b5f7 1-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3132578f0cf8def34dc52db17047f7df5b425a8d",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
