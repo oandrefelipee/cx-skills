@@ -1,0 +1,36 @@
+{
+  "titulo": "Assinaturas: pausar e retomar pelo painel",
+  "pr": { "numero": 42, "url": "https://github.com/acme/loja-exemplo/pull/42", "branch": "feat/12-pausar-assinatura", "base": "main", "autor": "agente + revisão humana" },
+  "data": "2026-10-15",
+  "estado": "pass",
+  "resumo": "História 12 completa: a pessoa pausa e retoma a assinatura sem falar com o suporte. Migração expand-contract (só acrescenta coluna).",
+  "oQueMudou": [
+    "Botão Pausar na linha da assinatura, com Desfazer por 10 s",
+    "Coluna paused_at (nula) e índice parcial; nada removido",
+    "Rotina diária ignora assinaturas pausadas na cobrança",
+    "E2E do fluxo de pausa e testes da rotina de cobrança"
+  ],
+  "antesDepois": [
+    {
+      "titulo": "Linha da assinatura",
+      "antes": { "ascii": "| Plano Pro  ● Ativa    R$ 49/mês   [Cancelar] |" },
+      "depois": { "ascii": "| Plano Pro  ● Ativa    R$ 49/mês   [Pausar] ⋯ |\n| Plano Pro  ○ Pausada  até 12/11   [Retomar]  |" }
+    }
+  ],
+  "checks": [
+    { "nome": "ci/circleci: gates", "estado": "pass", "provedor": "circleci", "link": "https://circleci.com/gh/acme/loja-exemplo/101" },
+    { "nome": "ci/circleci: e2e-afetado", "estado": "pass", "provedor": "circleci", "link": "https://circleci.com/gh/acme/loja-exemplo/102" },
+    { "nome": "revisão de código", "estado": "pass", "provedor": "github (app)" },
+    { "nome": "capturas visuais", "estado": "skipping", "provedor": "noturno" }
+  ],
+  "deploy": [
+    { "ambiente": "staging", "sha": "3f9a2c1e", "health": "saudavel", "quando": "15/10 14:20" },
+    { "ambiente": "production", "sha": "", "health": "pendente", "quando": "aguarda o \"pode\"" }
+  ],
+  "dora": { "periodo": "set/2026", "frequenciaDeploy": "14/mês", "leadTime": "1,6 dia", "taxaFalha": "7%", "recuperacao": "18 min" },
+  "riscos": [
+    { "nivel": "medio", "texto": "Cobrança do dia da pausa pode sair se a rotina rodar antes do clique.", "mitigacao": "A rotina relê paused_at dentro da transação." },
+    { "nivel": "baixo", "texto": "Coluna nova sem uso pela versão anterior.", "mitigacao": "Expand-contract: a versão anterior ignora a coluna; rollback só do app." }
+  ],
+  "rollback": "Redeploy da versão anterior no provedor ou revert por PR. A migração fica (só acrescenta); o contract sai num PR posterior."
+}

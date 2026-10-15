@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assinaturas: pausar e retomar pelo painel · PR #42</title>
+<meta name="cx-pr" content="42">
+<meta name="cx-titulo" content="Assinaturas: pausar e retomar pelo painel">
+<meta name="cx-estado" content="pass">
+<meta name="cx-data" content="2026-10-15">
+<style>
+:root{--fundo:#fafaf9;--superficie:#fff;--texto:#1c1917;--sutil:#57534e;--linha:#e7e5e4;--destaque:#1d4ed8;
+--ok:#15803d;--ok-f:#dcfce7;--erro:#b91c1c;--erro-f:#fee2e2;--aviso:#a16207;--aviso-f:#fef3c7;--neutro:#57534e;--neutro-f:#f5f5f4;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#0c0a09;--superficie:#1c1917;--texto:#f5f5f4;--sutil:#a8a29e;--linha:#292524;--destaque:#93c5fd;
+--ok:#86efac;--ok-f:#14532d55;--erro:#fca5a5;--erro-f:#7f1d1d55;--aviso:#fcd34d;--aviso-f:#78350f55;--neutro:#d6d3d1;--neutro-f:#29252488;color-scheme:dark}}
+:root[data-theme="dark"]{--fundo:#0c0a09;--superficie:#1c1917;--texto:#f5f5f4;--sutil:#a8a29e;--linha:#292524;--destaque:#93c5fd;
+--ok:#86efac;--ok-f:#14532d55;--erro:#fca5a5;--erro-f:#7f1d1d55;--aviso:#fcd34d;--aviso-f:#78350f55;--neutro:#d6d3d1;--neutro-f:#29252488;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}
+header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding-bottom:20px;border-bottom:1px solid var(--linha);margin-bottom:8px}
+h1{font-size:24px;line-height:1.25;margin:4px 0 8px;letter-spacing:-.01em}h2{font-size:15px;margin:0 0 12px;display:flex;gap:8px;align-items:baseline}
+.meta{color:var(--sutil);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 14px}.meta code{font-size:12px}
+.resumo{margin:12px 0 0;max-width:70ch}
+section{padding:22px 0;border-bottom:1px solid var(--linha)}section:last-of-type{border-bottom:0}
+a{color:var(--destaque);text-underline-offset:2px}code{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+.sutil,.conta{color:var(--sutil);font-weight:400;font-size:13px}
+.lista{margin:0;padding-left:18px}.lista li{margin:2px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;font-weight:500;color:var(--sutil);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--linha)}
+td{padding:8px;border-bottom:1px solid var(--linha);vertical-align:top}tr:last-child td{border-bottom:0}
+.selo{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.selo::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.ok{color:var(--ok);background:var(--ok-f)}.erro{color:var(--erro);background:var(--erro-f)}.aviso{color:var(--aviso);background:var(--aviso-f)}.neutro{color:var(--neutro);background:var(--neutro-f)}
+.par{margin:0 0 20px}.par figcaption{font-weight:500;margin-bottom:8px}
+.lados{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lados>div{background:var(--superficie);border:1px solid var(--linha);border-radius:10px;padding:12px;min-width:0}
+.rotulo{display:block;font-size:12px;color:var(--sutil);margin-bottom:6px}
+.ascii{margin:0;overflow-x:auto;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre}
+img{max-width:100%;height:auto;border-radius:6px;display:block}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{background:var(--superficie);border:1px solid var(--linha);border-radius:10px;padding:12px}
+.kpi strong{font-size:20px;font-variant-numeric:tabular-nums}
+.riscos{list-style:none;margin:0;padding:0}.riscos li{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:flex-start;padding:6px 0}.riscos p{margin:0}
+.vazio{color:var(--sutil);font-size:13px;margin:0}
+button.tema{font:inherit;font-size:13px;color:var(--sutil);background:transparent;border:1px solid var(--linha);border-radius:8px;padding:4px 10px;cursor:pointer}
+footer{color:var(--sutil);font-size:12px;margin-top:24px}
+@media (max-width:720px){.lados{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}header{flex-direction:column}}
+@media print{button.tema{display:none}}</style>
+<script>(function(){var r=document.documentElement,k="cx-tema";try{var t=localStorage.getItem(k);if(t)r.dataset.theme=t}catch(e){}
+document.addEventListener("click",function(ev){if(!ev.target.closest(".tema"))return;var escuro=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;r.dataset.theme=escuro?"light":"dark";try{localStorage.setItem(k,r.dataset.theme)}catch(e){}})})()</script>
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <div class="meta"><a href="https://github.com/acme/loja-exemplo/pull/42">PR #42</a><code>feat/12-pausar-assinatura → main</code><span>agente + revisão humana</span><span>2026-10-15</span></div>
+    <h1>Assinaturas: pausar e retomar pelo painel</h1>
+    <span class="selo ok">ok</span>
+    <p class="resumo">História 12 completa: a pessoa pausa e retoma a assinatura sem falar com o suporte. Migração expand-contract (só acrescenta coluna).</p>
+  </div>
+  <button class="tema" type="button">Tema</button>
+</header>
+<section><h2>O que mudou</h2><ul class="lista"><li>Botão Pausar na linha da assinatura, com Desfazer por 10 s</li><li>Coluna paused_at (nula) e índice parcial; nada removido</li><li>Rotina diária ignora assinaturas pausadas na cobrança</li><li>E2E do fluxo de pausa e testes da rotina de cobrança</li></ul></section>
+<section><h2>Antes → depois</h2>
+  <figure class="par">
+    <figcaption>Linha da assinatura</figcaption>
+    <div class="lados"><div><span class="rotulo">Antes</span><pre class="ascii">| Plano Pro  ● Ativa    R$ 49/mês   [Cancelar] |</pre></div><div><span class="rotulo">Depois</span><pre class="ascii">| Plano Pro  ● Ativa    R$ 49/mês   [Pausar] ⋯ |
+| Plano Pro  ○ Pausada  até 12/11   [Retomar]  |</pre></div></div>
+  </figure></section>
+<section><h2>Checks <span class="conta">3/4 ok</span></h2><table><thead><tr><th>Check</th><th>Estado</th><th>Provedor</th></tr></thead><tbody><tr><td><a href="https://circleci.com/gh/acme/loja-exemplo/101">ci/circleci: gates</a></td><td><span class="selo ok">ok</span></td><td class="sutil">circleci</td></tr><tr><td><a href="https://circleci.com/gh/acme/loja-exemplo/102">ci/circleci: e2e-afetado</a></td><td><span class="selo ok">ok</span></td><td class="sutil">circleci</td></tr><tr><td>revisão de código</td><td><span class="selo ok">ok</span></td><td class="sutil">github (app)</td></tr><tr><td>capturas visuais</td><td><span class="selo neutro">pulado</span></td><td class="sutil">noturno</td></tr></tbody></table></section>
+<section><h2>Deploy</h2><table><thead><tr><th>Ambiente</th><th>SHA</th><th>Health</th><th>Quando</th></tr></thead><tbody><tr><td>staging</td><td><code>3f9a2c1</code></td><td><span class="selo ok">saudável</span></td><td class="sutil">15/10 14:20</td></tr><tr><td>production</td><td><code></code></td><td><span class="selo aviso">pendente</span></td><td class="sutil">aguarda o &quot;pode&quot;</td></tr></tbody></table></section>
+<section><h2>DORA leve <span class="conta">set/2026</span></h2><div class="kpis"><div class="kpi"><span class="rotulo">Deploys</span><strong>14/mês</strong></div><div class="kpi"><span class="rotulo">Tempo até produção</span><strong>1,6 dia</strong></div><div class="kpi"><span class="rotulo">Taxa de falha</span><strong>7%</strong></div><div class="kpi"><span class="rotulo">Recuperação</span><strong>18 min</strong></div></div></section>
+<section><h2>Riscos</h2><ul class="riscos"><li><span class="selo aviso">médio</span><div><p>Cobrança do dia da pausa pode sair se a rotina rodar antes do clique.</p><p class="sutil">Mitigação: A rotina relê paused_at dentro da transação.</p></div></li><li><span class="selo neutro">baixo</span><div><p>Coluna nova sem uso pela versão anterior.</p><p class="sutil">Mitigação: Expand-contract: a versão anterior ignora a coluna; rollback só do app.</p></div></li></ul></section>
+<section><h2>Plano de volta</h2><p>Redeploy da versão anterior no provedor ou revert por PR. A migração fica (só acrescenta); o contract sai num PR posterior.</p></section>
+<footer>Gerado por cx-deploy-pipeline · relatorio-pr.mjs</footer>
+</main>
+</body>
+</html>

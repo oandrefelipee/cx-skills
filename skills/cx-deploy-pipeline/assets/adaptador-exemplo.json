@@ -1,0 +1,48 @@
+{
+  "projeto": "loja-exemplo",
+  "ci": {
+    "provider": "circleci",
+    "requiredChecks": ["ci/circleci: gates", "ci/circleci: e2e-afetado"],
+    "status": "npm run ci:status <pr>",
+    "logs": "npm run ci:logs <pr> <check>",
+    "rerun": "npm run ci:rerun <pr> --failed",
+    "flaky": "mcp: find_flaky_tests",
+    "validateConfig": "circleci config validate",
+    "cli": "circleci",
+    "mcp": "circleci-mcp-server"
+  },
+  "merge": {
+    "estrategia": "trem",
+    "comandoTrem": "npm run ci:train --prs <a,b,c>",
+    "metodo": "squash"
+  },
+  "deploy": {
+    "provider": "dokploy",
+    "environments": [
+      {
+        "name": "staging",
+        "trigger": "auto-main",
+        "needsPode": false,
+        "healthUrls": ["https://api.staging.loja-exemplo.dev/health"],
+        "smoke": "npm run deploy:smoke staging"
+      },
+      {
+        "name": "production",
+        "trigger": "tag v*",
+        "needsPode": true,
+        "healthUrls": ["https://api.loja-exemplo.dev/health", "https://loja-exemplo.dev/health"],
+        "smoke": "npm run deploy:smoke production"
+      }
+    ],
+    "status": "npm run deploy:status <env>",
+    "logs": "dokploy CLI ou painel: aba Logs do serviço",
+    "rollback": "painel do Dokploy: redeploy da versão anterior; ou revert por PR",
+    "migrations": "expand-contract"
+  },
+  "relatorios": { "dir": "docs/relatorios/pr" },
+  "recursos": {
+    "pisoDiscoGb": 5,
+    "proibidoNoLaptop": ["npm run test:e2e", "npm run smoke", "docker compose up"]
+  },
+  "segredos": { "onde": "variáveis de projeto do CircleCI e aba Environment do Dokploy" }
+}
