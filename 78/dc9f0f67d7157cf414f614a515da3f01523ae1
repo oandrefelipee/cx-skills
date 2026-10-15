@@ -1,0 +1,24 @@
+skills/cx-actionable-ui/scripts/gerar-guia.mjs
+  s_635d6e7dfccdc6::t_1b8b2a65ff04c0 69-70
+  s_635d6e7dfccdc6::t_3802b55c30c63e 1-68,71-174
+skills/cx-actionable-ui/references/guia.html
+  s_635d6e7dfccdc6::t_ec38635ff16ffd 298,303,313,336-337,359-360,382-383,405-406,430-431,453-454,475-476,496-497,518-519,540-541,561-562,583-584,605-606,627-628,650-651,671-672,692-693,715-716,738-739,761-762,783-784,805-806,827-828,849-850,871-872,893-894,914-915,936-937,957-958,968,979-980,1001-1002,1012,1022-1023,1043-1044,1054,1064-1065,1086-1087,1108-1109,1131-1132,1153-1154,1176-1177,1199-1200,1220-1221,1241-1242,1263-1264,1286-1287,1307-1308,1331-1332,1354-1355,1375-1376,1397-1398,1419-1420,1442-1443,1465-1466,1471
+skills/cx-actionable-ui/references/livros.md
+  s_635d6e7dfccdc6::t_c8f1672186d7ce 3,7-21,25-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "78dc9f0f67d7157cf414f614a515da3f01523ae1",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
