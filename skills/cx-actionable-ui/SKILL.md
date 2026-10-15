@@ -1,6 +1,6 @@
 ---
 name: cx-actionable-ui
-description: Torna uma tela de produto orientada a ação, com menos texto e mais clareza. Use sempre que o pedido for auditar, simplificar, enxugar, "tirar texto", "deixar mais direto/escaneável", melhorar microcopy, criar estado vazio, checklist de primeiro uso, cartões de KPI, selos de status, tooltips de ajuda, ou quando uma tela parecer um documento (parágrafos, fórmulas, explicações fixas) em vez de um painel. Cobre dashboards, admin, configurações, listas e onboarding, em qualquer stack. Use junto com a skill `impeccable` (comandos distill, clarify, critique) quando ela estiver instalada.
+description: Torna uma tela de produto orientada a ação, com menos texto e mais clareza. Planeja a tela por blocos (catálogo com orçamento de palavras) e wireframe ASCII em 390 e 1280 antes de escrever texto ou código, e confere a entrega contra o wireframe aprovado. Use sempre que o pedido for criar ou refazer uma tela, auditar, simplificar, enxugar, "tirar texto", "deixar mais direto/escaneável", melhorar microcopy, criar estado vazio, checklist de primeiro uso, cartões de KPI, selos de status, tooltips de ajuda, ou quando uma tela parecer um documento (parágrafos, fórmulas, explicações fixas) em vez de um painel. Cobre dashboards, admin, configurações, listas e onboarding, em qualquer stack. Use junto com a skill `impeccable` (comandos distill, clarify, critique) quando ela estiver instalada.
 ---
 
 # UI orientada a ação
@@ -34,15 +34,28 @@ Escolha pelo pedido e leia só o arquivo necessário:
 
 | Pedido | Leia |
 |---|---|
+| Tela nova ou refeita (sempre primeiro) | `workflows/00-planejar-blocos.md`, `references/catalogo-de-blocos.md` e `references/wireframe-ascii.md` |
 | "Revise/enxugue esta tela" (fluxo completo) | `workflows/01-auditar-tela.md` e siga em ordem até o 05 |
-| Só medir o excesso de texto | `workflows/02-listar-excesso-de-texto.md` |
+| Só medir o excesso de texto | `workflows/02-listar-excesso-de-texto.md` e `scripts/contar-palavras.mjs` |
 | Escolher a técnica para um problema | `references/techniques.md` |
-| Aplicar técnicas no código | `workflows/03-aplicar-tecnicas.md` |
+| Aplicar técnicas no código | `workflows/03-aplicar-tecnicas.md` e `references/anti-slop.md` |
 | Reescrever textos | `workflows/04-reescrever-microcopy.md` e `references/tone-matrix.md` |
-| Validar o resultado | `workflows/05-qa-visual.md` e `references/checklist.md` |
+| Validar o resultado | `workflows/05-qa-visual.md`, `references/checklist.md` e `references/anti-slop.md` |
 | Aprender, mostrar ou consultar com antes e depois | Abra `references/guia.html` no navegador (guia visual, com busca e filtros) |
 | Acrescentar uma técnica, lei, princípio ou livro ao guia | `workflows/06-acrescentar-ao-guia.md` |
 | Citar uma fonte (livro ou guia online) | `references/livros.md` |
+
+Regra que mais se perde: **o visual aprovado no wireframe faz parte da aprovação.** "Menos texto" corta texto, nunca remove gradiente, selo ou cor aprovados, e "polir" não acrescenta brilho, sombra nem ✨ (`references/anti-slop.md`).
+
+## Scripts
+
+Node 18+ ou Bun, sem dependências. `--ajuda` mostra o uso completo.
+
+| Script | Para quê | Exemplo |
+|---|---|---|
+| `scripts/contar-palavras.mjs` | Palavras visíveis por bloco contra o orçamento (HTML com `data-bloco`, JSON de `innerText` do E2E ou texto) | `node scripts/contar-palavras.mjs tela.html --orcamento orc.json --estrito` |
+| `scripts/checar-capturas.mjs` | Capturas mais velhas que o último commit de UI ou faltando na matriz larguras × temas | `node scripts/checar-capturas.mjs <pasta> --ui src/app --estrito` |
+| `scripts/wireframe-ascii.mjs` | Esqueleto ASCII em 390 e 1280 a partir de uma lista de blocos | `node scripts/wireframe-ascii.mjs tela.json` |
 
 ## Guia visual vivo
 

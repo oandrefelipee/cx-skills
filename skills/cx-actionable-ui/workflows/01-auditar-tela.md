@@ -1,5 +1,7 @@
 # 01. Auditar a tela
 
+Tela nova ou refeita: faça antes o `00-planejar-blocos.md`. Este passo audita o que existe; o 00 decide o que deve existir.
+
 Objetivo: entender o que a pessoa decide ali e o que está atrapalhando, antes de mexer em qualquer coisa.
 
 1. Abra a tela no navegador e tire print em desktop e 390 px, tema claro e escuro. Sem print, a auditoria vira opinião.
