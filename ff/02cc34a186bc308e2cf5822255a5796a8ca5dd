@@ -1,0 +1,21 @@
+skills/cx-deploy-pipeline/scripts/redigir.mjs
+  s_635d6e7dfccdc6::t_11532447938023 14-16,19-23,26-27,29,37,42,46,48-50,53,59-70,76-87
+skills/cx-deploy-pipeline/scripts/redigir.test.mjs
+  s_635d6e7dfccdc6::t_c4b76524564d65 4-8,15,44-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff02cc34a186bc308e2cf5822255a5796a8ca5dd",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
