@@ -1,0 +1,25 @@
+skills/cx-actionable-ui/references/anti-slop.md
+  s_635d6e7dfccdc6::t_9ba41db5a7157e 1-46
+skills/cx-actionable-ui/workflows/00-planejar-blocos.md
+  s_635d6e7dfccdc6::t_7e40795bcbdf04 1-29
+skills/cx-actionable-ui/references/wireframe-ascii.md
+  s_635d6e7dfccdc6::t_d5ec7e03af225b 1-128
+skills/cx-actionable-ui/references/catalogo-de-blocos.md
+  s_635d6e7dfccdc6::t_fcd5f7a53dd312 1-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "773d4d49063d6162ff62bcf4ea12f1a9b28e75c7",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
