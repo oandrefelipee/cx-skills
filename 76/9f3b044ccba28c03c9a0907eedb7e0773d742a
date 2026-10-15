@@ -1,0 +1,27 @@
+README.md
+  s_635d6e7dfccdc6::t_ba1d57120793c3 7,21-28
+skills/cx-actionable-ui/SKILL.md
+  s_635d6e7dfccdc6::t_ac529dbcc67f48 3,37,39,41,43,48-59
+skills/cx-actionable-ui/references/adaptador-modelo.md
+  s_635d6e7dfccdc6::t_c5ec3827385abd 20-30,34-35
+skills/cx-actionable-ui/workflows/01-auditar-tela.md
+  s_635d6e7dfccdc6::t_84f5fafad418fe 3-4
+skills/cx-actionable-ui/workflows/05-qa-visual.md
+  s_635d6e7dfccdc6::t_17f5d10487180a 3,5-12,16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "769f3b044ccba28c03c9a0907eedb7e0773d742a",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
