@@ -19,9 +19,11 @@ Atalho: `scripts/wireframe-ascii.mjs` gera o esqueleto a partir de uma lista de 
 
 ## Saída
 
+Entregue nesta ordem, que reflete a regra "texto por último": nos wireframes, os textos são marcadores curtos (`[Ação]`, `Título`, `(● Estado)`); a microcopy final só aparece na tabela, depois do layout.
+
 1. A intenção em duas linhas.
-2. Um wireframe ASCII de cada largura (390 e 1280).
-3. A tabela:
+2. Um wireframe ASCII de cada largura (390 e 1280), com marcadores no lugar do texto final.
+3. A tabela, com a microcopy final e o orçamento de cada bloco:
 
 | # | Bloco (catálogo) | Componente da casa | Orçamento (palavras) | Texto proposto | ⓘ |
 |---|---|---|---|---|---|

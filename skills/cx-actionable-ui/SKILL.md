@@ -82,4 +82,13 @@ Se `~/.claude/skills/impeccable` (ou `.agents/skills/impeccable`) existir, use o
 
 ## Saídas esperadas
 
-Devolva tabelas curtas, não prosa: bloco, veredito, técnica (com link para o item), antes e depois. O dono revisa por tabela e por print. Sempre que aprender algo novo e útil sobre UI orientada a ação, acrescente ao guia (`workflows/06-acrescentar-ao-guia.md`).
+Devolva tabelas curtas, não prosa: bloco, veredito, técnica (com link para o item), antes e depois. O dono revisa por tabela e por print.
+
+**A resposta segue a própria regra.** Uma skill que corta texto não pode responder com texto demais: tabela + wireframe ASCII + no máximo 5 linhas de explicação por tela. Citação de lei é o nome com link, não um parágrafo sobre ela.
+
+**Autocheck antes de entregar** (leia a própria resposta):
+- cada tela ou bloco tem **uma** ação primária, inclusive nos wireframes que você desenhou;
+- nada no "depois" repete o título ou o vizinho;
+- listas paralelas têm a mesma forma gramatical (veja `references/anti-slop.md`, paralelismo);
+- o texto final cabe no orçamento de cada bloco.
+Se algum item falhar, corrija antes de responder. Sempre que aprender algo novo e útil sobre UI orientada a ação, acrescente ao guia (`workflows/06-acrescentar-ao-guia.md`).

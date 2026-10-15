@@ -44,3 +44,13 @@ Resumo do "craft floor" da skill [impeccable](https://github.com/pbakaus/impecca
 - [ ] Superfícies do navegador: seleção, cursor, barra de rolagem, anel de foco e números tabulares tematizados.
 - [ ] Texto: a língua do produto; controle nomeia a ação; erro nomeia o problema e a saída.
 - [ ] Recusar por padrão: cartões iguais de ícone + título + texto como estrutura; eyebrow acima do título; numeração 01/02/03 sem sentido; vidro e desfoque decorativos; borda lateral colorida grossa em cartão ou alerta; emoji no lugar de ícone.
+
+
+## Paralelismo de verdade
+
+Itens de uma lista têm a mesma forma gramatical **e o mesmo tipo de coisa**. Parecer curto e alinhado não basta.
+
+- Errado: "Investiga seu checkout · Envia todo pedido pago · Token só no servidor". Os dois primeiros são ações do agente; o terceiro é uma garantia de segurança.
+- Certo: "Acha onde nasce o pedido · Envia todo pedido pago · Guarda o token no servidor" (três ações), ou separar a garantia: tópicos com as ações e a garantia num selo ou ⓘ.
+
+Teste rápido: comece cada item com "Ele…" ou "Você…". Se um item não fecha a frase, ele é de outro tipo.
