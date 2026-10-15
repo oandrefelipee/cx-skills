@@ -10,9 +10,9 @@ Objetivo: decidir, bloco a bloco, o que fica, encurta, muda de lugar ou sai.
 |---|---|---|
 | Manter | Muda a decisão ou é o próprio estado | Fica |
 | Encurtar | Correto, mas longo | Microcopy (passo 04) |
-| Virar ajuda | Explica "como" ou "por quê" | Tooltip ou popover ⓘ (técnica 16) |
-| Virar estado vazio | Só aparece quando não há dados | Vazio acionável (técnica 11) |
-| Virar selo | Diz o estado em frase | Selo de status (técnica 13) |
+| Virar ajuda | Explica "como" ou "por quê" | Tooltip ou popover ⓘ ([ajuda contextual](../references/tecnicas/ajuda-contextual.md)) |
+| Virar estado vazio | Só aparece quando não há dados | [Vazio acionável](../references/tecnicas/estado-vazio-acionavel.md) |
+| Virar selo | Diz o estado em frase | [Selo de status](../references/tecnicas/selo-de-status.md) |
 | Cortar | Repete título, vizinho ou o óbvio | Remover |
 
-Saída: tabela `bloco | palavras | veredito | técnica`.
+Saída: tabela `bloco | palavras | veredito | técnica`, com a técnica como link para o arquivo dela.

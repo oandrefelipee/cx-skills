@@ -1,6 +1,6 @@
 # Checklist de UI orientada a ação
 
-Marque antes de dar a tela por pronta. Cada item vem de uma técnica de `techniques.md`.
+Marque antes de dar a tela por pronta. Cada item vem de uma técnica de [`tecnicas/INDEX.md`](tecnicas/INDEX.md); se um item falhar, [`sintomas.md`](sintomas.md) diz o que abrir.
 
 - [ ] Há uma ação primária clara e só uma por tela ou bloco.
 - [ ] O título tem até 4 palavras e não repete a navegação.

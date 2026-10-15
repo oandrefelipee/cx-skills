@@ -11,7 +11,9 @@ Se a tela já tem wireframe aprovado, ele é o ponto de partida: este passo só 
 3. **Componente da casa.** Para cada bloco, ache o componente no adaptador do projeto (`docs/design/ui-acao/README.md`). Sem adaptador, use o que o projeto já tem; nunca invente componente.
 4. **Layout responsivo.** Desenhe o wireframe ASCII em 390 e em 1280 colunas lógicas, pela convenção de `../references/wireframe-ascii.md`. No 390, a ação primária continua visível sem rolar; o que é lado a lado no desktop vira pilha.
 5. **Texto por último.** Só agora escreva os textos, cada bloco dentro do orçamento de palavras do catálogo (ou do adaptador, que vence). Se não couber, o bloco está errado, não o orçamento.
-6. **Porquê em ⓘ.** Toda explicação (regra, fórmula, motivo) vira tooltip ou popover com ⓘ. Na tela fica só o que muda a decisão.
+6. **Porquê em ⓘ.** Toda explicação (regra, fórmula, motivo) vira tooltip ou popover com ⓘ ([ajuda contextual](../references/tecnicas/ajuda-contextual.md)). Na tela fica só o que muda a decisão.
+
+Em dúvida sobre um bloco, consulte `../references/tecnicas/INDEX.md` (a técnica) e `../references/leis/INDEX.md` (a lei que a justifica). Abra o arquivo do item só se precisar do antes e depois.
 
 Atalho: `scripts/wireframe-ascii.mjs` gera o esqueleto a partir de uma lista de blocos em JSON; ajuste à mão depois.
 

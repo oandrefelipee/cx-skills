@@ -5,16 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UI orientada a ação - guia</title>
 <!--
-COMO ACRESCENTAR UM ITEM
-1. Abra o bloco <script type="application/json" id="dados"> mais abaixo. Tudo o que a página mostra vem dele.
-2. Em "itens", copie um objeto existente e mude os campos:
-   id (único, ex.: "t-31"), cat ("Princípio" | "Lei" | "Técnica"), en, pt, definicao, quando, exemplo, anti,
-   ctx (lista com: "Configuração", "Operação", "Momento humano", "Erro ou risco"),
-   fontes (lista de ids de "fontes", ex.: ["nng","krug"]), antes e depois (HTML do mini mock),
-   prompt (uma linha para pedir a um agente), destaque (true entra em "Como pedir a um agente").
-3. Para uma fonte nova, acrescente um objeto em "fontes" (id, tipo "livro" | "guia", autor, titulo, edicao, url, ensina).
-4. A numeração, a busca, os filtros e os links "Fonte" se montam sozinhos. Não há mais nada a editar.
-Classes úteis nos mocks: ln, mu, p, bd (ok|wa|er|n), bt (p|big), fld, i, tip, bar, kpi, sk, prev, er-t.
+GERADO A PARTIR DOS .md: não edite o bloco <script type="application/json" id="dados"> à mão.
+A fonte única são references/principios/, references/leis/, references/tecnicas/ (um .md por item)
+e references/livros.md (fontes). Para acrescentar ou mudar um item, edite o .md e rode:
+  node scripts/gerar-guia.mjs
+Veja workflows/06-acrescentar-ao-guia.md. O resto deste HTML (estilo, layout, script) é editado aqui.
+Classes úteis nos mocks (comentários guia:antes e guia:depois de cada .md): ln, mu, p, bd (ok|wa|er|n), bt (p|big), fld, i, tip, bar, kpi, sk, prev, er-t.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -114,7 +110,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 <h2 id="livros">Livros e fontes</h2>
 <p class="lead">De onde vêm as ideias. Os resumos são nossos, escritos com as nossas palavras; para o conteúdo completo, vá à fonte. Cada etiqueta "Fonte" nos cartões leva até aqui.</p>
 <div id="livros-lista"></div>
-<footer>Guia genérico da skill cx-actionable-ui, sem referência a projeto. Para acrescentar itens, veja o comentário no topo do HTML e workflows/06-acrescentar-ao-guia.md.</footer>
+<footer>Guia genérico da skill cx-actionable-ui, sem referência a projeto. Gerado a partir dos .md da skill por scripts/gerar-guia.mjs; para acrescentar itens, veja workflows/06-acrescentar-ao-guia.md.</footer>
 </div>
 <script type="application/json" id="dados">{
  "rotuloPl": "No projeto",
