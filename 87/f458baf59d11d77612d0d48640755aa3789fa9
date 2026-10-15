@@ -1,0 +1,24 @@
+skills/cx-actionable-ui/references/sintomas.md
+  s_635d6e7dfccdc6::t_9204b96a0ed567 1-147
+  s_635d6e7dfccdc6::t_ea22886e49c8ea 148-159
+skills/cx-actionable-ui/scripts/checar-links.mjs
+  s_635d6e7dfccdc6::t_fc91aef0597d44 1-42
+skills/cx-actionable-ui/references/diagramas.md
+  s_635d6e7dfccdc6::t_de5cb926b17ee3 1-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87f458baf59d11d77612d0d48640755aa3789fa9",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
