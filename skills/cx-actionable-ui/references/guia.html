@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI orientada a ação - guia</title>
+<!--
+COMO ACRESCENTAR UM ITEM
+1. Abra o bloco <script type="application/json" id="dados"> mais abaixo. Tudo o que a página mostra vem dele.
+2. Em "itens", copie um objeto existente e mude os campos:
+   id (único, ex.: "t-31"), cat ("Princípio" | "Lei" | "Técnica"), en, pt, definicao, quando, exemplo, anti,
+   ctx (lista com: "Configuração", "Operação", "Momento humano", "Erro ou risco"),
+   fontes (lista de ids de "fontes", ex.: ["nng","krug"]), antes e depois (HTML do mini mock),
+   prompt (uma linha para pedir a um agente), destaque (true entra em "Como pedir a um agente").
+3. Para uma fonte nova, acrescente um objeto em "fontes" (id, tipo "livro" | "guia", autor, titulo, edicao, url, ensina).
+4. A numeração, a busca, os filtros e os links "Fonte" se montam sozinhos. Não há mais nada a editar.
+Classes úteis nos mocks: ln, mu, p, bd (ok|wa|er|n), bt (p|big), fld, i, tip, bar, kpi, sk, prev, er-t.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f7f8;--surface:#fff;--surface-2:#f1f1f3;--text:#17171a;--muted:#6b6b76;--line:#e4e4e8;--accent:#2f5bea;--ok:#157f4b;--ok-bg:#e3f5ec;--wa:#a45a00;--wa-bg:#fdf0da;--er:#b3261e;--er-bg:#fbe5e3;--n-bg:#ececf0;--radius:12px;--hl:#fff7d6}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f0f12;--surface:#18181c;--surface-2:#202026;--text:#ececf0;--muted:#9a9aa6;--line:#2b2b33;--accent:#7b9bff;--ok:#5bd694;--ok-bg:#12301f;--wa:#f0b15a;--wa-bg:#382a10;--er:#ff8b82;--er-bg:#3a1714;--n-bg:#2a2a31;--hl:#3a3414}}
+:root[data-theme="dark"]{--bg:#0f0f12;--surface:#18181c;--surface-2:#202026;--text:#ececf0;--muted:#9a9aa6;--line:#2b2b33;--accent:#7b9bff;--ok:#5bd694;--ok-bg:#12301f;--wa:#f0b15a;--wa-bg:#382a10;--er:#ff8b82;--er-bg:#3a1714;--n-bg:#2a2a31;--hl:#3a3414}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 Geist,system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 16px 80px}
+h1,h2,h3{font-family:"Instrument Serif",Georgia,serif;font-weight:400;line-height:1.15;margin:0}
+h1{font-size:clamp(34px,6vw,52px)}h2{font-size:32px;margin:56px 0 12px}h3{font-size:24px}
+p{margin:8px 0}.lead{color:var(--muted);max-width:62ch}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+button,input{font:inherit;color:inherit}
+.theme{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:14px;cursor:pointer;white-space:nowrap}
+nav.main{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}
+nav.main a{padding:6px 12px;border:1px solid var(--line);border-radius:999px;color:var(--text);text-decoration:none;font-size:14px;background:var(--surface)}
+.tools{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0 8px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.search{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.chips .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.count{font-size:13px;color:var(--muted);margin-top:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin:16px 0;scroll-margin-top:150px}
+.card header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:8px}
+.num{color:var(--muted);font-size:14px}.pt{color:var(--muted)}
+.pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--muted)}
+dl{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;margin:12px 0;font-size:15px}
+dt{color:var(--muted)}dd{margin:0}
+code{background:var(--surface-2);border-radius:4px;padding:0 4px;font-size:.92em}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.col{background:var(--surface-2);border-radius:10px;padding:12px;min-width:0}
+.col>b.lb{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;color:var(--er)}
+.col.after>b.lb{color:var(--ok)}
+.m{font-size:13px;line-height:1.45}
+.ln{margin:4px 0;word-break:break-word}.p{color:var(--muted)}.mu{color:var(--muted)}.tiny{font-size:8px;border:1px solid var(--line);padding:0 3px}
+.er-t{color:var(--er)}
+.bd{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;background:var(--n-bg);font-weight:500}
+.bd.ok{background:var(--ok-bg);color:var(--ok)}.bd.wa{background:var(--wa-bg);color:var(--wa)}.bd.er{background:var(--er-bg);color:var(--er)}
+.bt{display:inline-block;padding:3px 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:12px}
+.bt.p{background:var(--accent);border-color:var(--accent);color:#fff}.bt.big{padding:11px 16px;font-size:13px}
+.i{color:var(--accent);cursor:help}.tip{display:inline-block;background:var(--text);color:var(--bg);border-radius:6px;padding:2px 8px;font-size:12px}
+.fld{display:inline-block;border:1px dashed var(--line);padding:0 8px;color:var(--muted);border-radius:6px}
+.bar{height:6px;background:var(--n-bg);border-radius:4px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--accent)}
+.kpi{display:flex;flex-direction:column;gap:2px}.kpi b{font-size:28px;font-family:"Instrument Serif",serif;font-weight:400}
+.sk{height:12px;background:linear-gradient(90deg,var(--n-bg),var(--surface),var(--n-bg));border-radius:6px;margin:8px 0}.sk.s{width:60%}
+.prev{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface)}.pv-h{height:30px;background:var(--accent);opacity:.25;border-radius:6px}.pv-l{height:8px;background:var(--n-bg);margin-top:8px;border-radius:4px}.pv-l.s{width:60%}
+.pl{margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--surface-2);font-size:14px}
+.pl b{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin-right:6px}
+.say{border-left:3px solid var(--accent);padding:8px 12px;background:var(--surface);margin:10px 0 0;border-radius:0 8px 8px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;justify-content:space-between}
+.say>div{flex:1 1 220px;min-width:0}
+.say small{color:var(--muted);display:block}
+.copy{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:2px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}
+.tags .lbl{font-size:12px;color:var(--muted)}
+.src{font-size:12px;border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:1px 10px;text-decoration:none}
+.ctxt{font-size:12px;background:var(--n-bg);border-radius:999px;padding:1px 10px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto}
+.empty{padding:32px 0;color:var(--muted);text-align:center}
+.book:target{outline:2px solid var(--accent);background:var(--hl)}
+.book h3{font-size:22px}
+.book .meta{color:var(--muted);font-size:14px}
+.book a.ext{color:var(--accent)}
+.booklinks{margin-top:8px;font-size:14px;display:flex;gap:12px;flex-wrap:wrap}
+footer{margin-top:56px;color:var(--muted);font-size:14px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:640px){.ba{grid-template-columns:1fr}dl{grid-template-columns:1fr}dt{margin-top:6px}h2{font-size:28px}.tools{position:static}}
+@media(max-height:700px){.tools{position:static}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top"><div><h1>UI orientada a ação</h1>
+<p class="lead">Uma tela de produto serve para decidir e agir, não para ser lida. Este guia reúne princípios, leis de UX e técnicas para cortar texto sem perder clareza, cada um com definição, antes e depois, prompt para um agente e a fonte. Cresce com o tempo: acrescente itens no bloco de dados.</p></div><button class="theme" id="tema" type="button" aria-label="Alternar tema claro e escuro">Tema</button></div>
+<nav class="main"><a href="#principios">Princípios</a><a href="#leis">Leis</a><a href="#tecnicas">Técnicas</a><a href="#tom">Matriz de tom</a><a href="#pedir">Como pedir a um agente</a><a href="#livros">Livros e fontes</a></nav>
+<div class="tools">
+<input class="search" id="q" type="search" placeholder="Buscar itens" aria-label="Buscar">
+<div class="chips" id="f-cat"></div>
+<div class="chips" id="f-ctx"></div>
+<div class="chips" id="f-src" hidden></div>
+<div class="count" id="count" aria-live="polite"></div>
+</div>
+<main id="lista"></main>
+<h2 id="tom">Matriz de tom por gatilho</h2>
+<p class="lead">A voz é sempre a mesma: clara, curta, "você". O tom muda com o que a pessoa está fazendo.</p>
+<div class="card scroll"><table><thead><tr><th>Contexto</th><th>Tom</th><th>Exemplo</th></tr></thead><tbody id="tons"></tbody></table></div>
+<h2 id="pedir">Como pedir a um agente</h2>
+<p class="lead" id="pedir-lead"></p>
+<div id="pedir-lista"></div>
+<h2 id="livros">Livros e fontes</h2>
+<p class="lead">De onde vêm as ideias. Os resumos são nossos, escritos com as nossas palavras; para o conteúdo completo, vá à fonte. Cada etiqueta "Fonte" nos cartões leva até aqui.</p>
+<div id="livros-lista"></div>
+<footer>Guia genérico da skill cx-actionable-ui, sem referência a projeto. Para acrescentar itens, veja o comentário no topo do HTML e workflows/06-acrescentar-ao-guia.md.</footer>
+</div>
+<script type="application/json" id="dados">{
+ "rotuloPl": "No projeto",
+ "perfil": "generico",
+ "fontes": [
+  {
+   "id": "krug",
+   "tipo": "livro",
+   "autor": "Steve Krug",
+   "titulo": "Don't Make Me Think, Revisited: A Common Sense Approach to Web (and Mobile) Usability",
+   "edicao": "3ª ed., 2014, New Riders (1ª ed. 2000)",
+   "url": "https://sensible.com/dont-make-me-think/",
+   "ensina": "Usabilidade de bom senso: a tela precisa ser autoevidente, as pessoas escaneiam em vez de ler e aceitam o primeiro caminho que parece servir. Mostra também como testar com poucas pessoas e pouco custo.",
+   "curto": "Krug · Don't Make Me Think"
+  },
+  {
+   "id": "norman",
+   "tipo": "livro",
+   "autor": "Don Norman",
+   "titulo": "The Design of Everyday Things (Revised and Expanded Edition)",
+   "edicao": "2013, Basic Books (1ª ed. 1988, como The Psychology of Everyday Things)",
+   "url": "https://jnd.org/books/the-design-of-everyday-things-revised-and-expanded-edition/",
+   "ensina": "Como objetos e telas comunicam o que fazem: sinalizadores e affordances, mapeamento, feedback, modelo conceitual e como projetar contando que as pessoas vão errar.",
+   "curto": "Norman · Design of Everyday Things"
+  },
+  {
+   "id": "yablonski",
+   "tipo": "livro",
+   "autor": "Jon Yablonski",
+   "titulo": "Laws of UX: Using Psychology to Design Better Products & Services",
+   "edicao": "2ª ed., 2024, O'Reilly (1ª ed. 2020)",
+   "url": "https://lawsofux.com/",
+   "ensina": "Traduz princípios da psicologia (Hick, Fitts, Miller, Jakob, Doherty, Gestalt e outros) em decisões práticas de interface, cada um com exemplo e ressalva de uso.",
+   "curto": "Yablonski · Laws of UX"
+  },
+  {
+   "id": "podmajersky",
+   "tipo": "livro",
+   "autor": "Torrey Podmajersky",
+   "titulo": "Strategic Writing for UX",
+   "edicao": "2ª ed., 2025, O'Reilly (1ª ed. 2019)",
+   "url": "https://www.oreilly.com/library/view/strategic-writing-for/9781098174323/",
+   "ensina": "Como escrever o texto da interface com estratégia: voz, tom, termos consistentes, padrões para botões, erros e vazios, e como medir se as palavras funcionam.",
+   "curto": "Podmajersky · Strategic Writing"
+  },
+  {
+   "id": "metts",
+   "tipo": "livro",
+   "autor": "Michael J. Metts e Andy Welfle",
+   "titulo": "Writing Is Designing: Words and the User Experience",
+   "edicao": "2020, Rosenfeld Media",
+   "url": "https://rosenfeldmedia.com/books/writing-is-designing/",
+   "ensina": "Defende que escrever para produto é projetar: as palavras entram no processo de design desde o início, com princípios de conteúdo, voz e tom, e prática de colaboração com design e engenharia.",
+   "curto": "Metts & Welfle · Writing Is Designing"
+  },
+  {
+   "id": "redish",
+   "tipo": "livro",
+   "autor": "Janice (Ginny) Redish",
+   "titulo": "Letting Go of the Words: Writing Web Content that Works",
+   "edicao": "2ª ed., 2012, Morgan Kaufmann (1ª ed. 2007)",
+   "url": "https://shop.elsevier.com/books/letting-go-of-the-words/redish/978-0-12-385930-3",
+   "ensina": "Escrever conteúdo para quem quer cumprir uma tarefa: partir das metas, usar linguagem simples, frases curtas, títulos informativos e blocos fáceis de escanear.",
+   "curto": "Redish · Letting Go of the Words"
+  },
+  {
+   "id": "few",
+   "tipo": "livro",
+   "autor": "Stephen Few",
+   "titulo": "Information Dashboard Design: Displaying Data for At-a-Glance Monitoring",
+   "edicao": "2ª ed., 2013, Analytics Press (1ª ed. 2006, O'Reilly)",
+   "url": "https://www.analyticspress.com/idd.php",
+   "ensina": "Painéis que se leem de relance: escolha do gráfico certo, uso de percepção visual (cor, posição, Gestalt), redução de ruído e destaque do que importa.",
+   "curto": "Few · Dashboard Design"
+  },
+  {
+   "id": "tufte",
+   "tipo": "livro",
+   "autor": "Edward R. Tufte",
+   "titulo": "The Visual Display of Quantitative Information",
+   "edicao": "2ª ed., 2001, Graphics Press (1ª ed. 1983)",
+   "url": "https://www.edwardtufte.com/book/the-visual-display-of-quantitative-information/",
+   "ensina": "Princípios de integridade e economia nos gráficos: a razão dados-tinta, sparklines e pequenos múltiplos, e como evitar enfeite que distorce ou esconde os números.",
+   "curto": "Tufte · Visual Display"
+  },
+  {
+   "id": "tidwell",
+   "tipo": "livro",
+   "autor": "Jenifer Tidwell, Charles Brewer e Aynne Valencia",
+   "titulo": "Designing Interfaces: Patterns for Effective Interaction Design",
+   "edicao": "3ª ed., 2020, O'Reilly",
+   "url": "https://www.oreilly.com/library/view/designing-interfaces-3rd/9781492051954",
+   "ensina": "Catálogo de padrões de interface (listas, formulários, navegação, divulgação progressiva, painéis) com quando usar, como funciona e variações em web e mobile.",
+   "curto": "Tidwell · Designing Interfaces"
+  },
+  {
+   "id": "cooper",
+   "tipo": "livro",
+   "autor": "Alan Cooper, Robert Reimann, David Cronin e Christopher Noessel",
+   "titulo": "About Face: The Essentials of Interaction Design",
+   "edicao": "4ª ed., 2014, Wiley",
+   "url": "https://www.wiley.com/en-us/about-face-the-essentials-of-interaction-design-4th-edition-p-9781118766576",
+   "ensina": "Design de interação orientado a metas: personas, cenários e comportamento do produto, com princípios como respeitar o tempo da pessoa, desfazer em vez de confirmar e bons padrões.",
+   "curto": "Cooper · About Face"
+  },
+  {
+   "id": "wroblewski",
+   "tipo": "livro",
+   "autor": "Luke Wroblewski",
+   "titulo": "Web Form Design: Filling in the Blanks",
+   "edicao": "2008, Rosenfeld Media",
+   "url": "https://rosenfeldmedia.com/books/web-form-design/",
+   "ensina": "Tudo sobre formulários: organização, rótulos, campos, ações, texto de ajuda, erros, validação em linha e como reduzir entradas desnecessárias.",
+   "curto": "Wroblewski · Web Form Design"
+  },
+  {
+   "id": "weinschenk",
+   "tipo": "livro",
+   "autor": "Susan M. Weinschenk",
+   "titulo": "100 Things Every Designer Needs to Know About People",
+   "edicao": "2ª ed., 2020, New Riders (1ª ed. 2011)",
+   "url": "https://www.informit.com/store/100-things-every-designer-needs-to-know-about-people-9780136746942",
+   "ensina": "Cem achados de psicologia e neurociência aplicados ao design: atenção, memória, motivação, emoção e tomada de decisão, em capítulos curtos.",
+   "curto": "Weinschenk · 100 Things"
+  },
+  {
+   "id": "refui",
+   "tipo": "livro",
+   "autor": "Adam Wathan e Steve Schoger",
+   "titulo": "Refactoring UI",
+   "edicao": "2018, publicação independente",
+   "url": "https://refactoringui.com/",
+   "ensina": "Design visual para quem programa: hierarquia, espaçamento, cor, tipografia e profundidade explicados com antes e depois práticos.",
+   "curto": "Wathan & Schoger · Refactoring UI"
+  },
+  {
+   "id": "polaris",
+   "tipo": "guia",
+   "autor": "Shopify",
+   "titulo": "Polaris, guia de conteúdo (Content)",
+   "edicao": "guia online, atualizado continuamente",
+   "url": "https://polaris.shopify.com/content",
+   "ensina": "Regras de conteúdo para produto: voz e tom por situação, frases curtas, botão começando por verbo, selos curtos, estados vazios e onboarding.",
+   "curto": "Shopify Polaris"
+  },
+  {
+   "id": "nng",
+   "tipo": "guia",
+   "autor": "Nielsen Norman Group",
+   "titulo": "Artigos e relatórios de UX (NN/g)",
+   "edicao": "guia online, atualizado continuamente",
+   "url": "https://www.nngroup.com/articles/",
+   "ensina": "Pesquisa de usabilidade aplicada: as 10 heurísticas, divulgação progressiva, pista de informação, estados vazios, esqueletos e tempos de resposta.",
+   "curto": "NN/g"
+  },
+  {
+   "id": "material",
+   "tipo": "guia",
+   "autor": "Google",
+   "titulo": "Material Design 3",
+   "edicao": "guia online, atualizado continuamente",
+   "url": "https://m3.material.io/",
+   "ensina": "Sistema de design com orientações de componentes, estados, tamanhos de alvo, movimento e padrões de aplicação em web e Android.",
+   "curto": "Material Design"
+  },
+  {
+   "id": "hig",
+   "tipo": "guia",
+   "autor": "Apple",
+   "titulo": "Human Interface Guidelines",
+   "edicao": "guia online, atualizado continuamente",
+   "url": "https://developer.apple.com/design/human-interface-guidelines",
+   "ensina": "Diretrizes das plataformas Apple: clareza, deferência e profundidade, tamanhos mínimos de toque, hierarquia, feedback e acessibilidade.",
+   "curto": "Apple HIG"
+  }
+ ],
+ "tons": [
+  {
+   "ctx": "Configuração técnica (integrações, DNS, chaves, API)",
+   "tom": "Seco e técnico (Vercel, Stripe)",
+   "ex": "<span class=\"bd ok\">Conectado · Servidor<\/span> <span class=\"bt\">Rotacionar<\/span>"
+  },
+  {
+   "ctx": "Operação do dia a dia (pedidos, métricas, créditos, auditoria)",
+   "tom": "Curto e neutro (Resend, Linear)",
+   "ex": "<span class=\"bd er\">Sem créditos<\/span> <span class=\"bt p\">Comprar créditos<\/span>"
+  },
+  {
+   "ctx": "Momentos humanos (onboarding, vazio, sucesso, primeiro uso, e-mail ao cliente)",
+   "tom": "Curto e amigável (Shopify)",
+   "ex": "\"Tudo pronto. Envie seu primeiro pedido.\""
+  },
+  {
+   "ctx": "Erro ou risco",
+   "tom": "Claro e calmo: o que houve e a ação",
+   "ex": "\"DNS não encontrado.\" <span class=\"bt\">Ver registros<\/span>"
+  }
+ ],
+ "itens": [
+  {
+   "id": "p-estado-acao",
+   "cat": "Princípio",
+   "en": "State and action before explanation",
+   "pt": "Estado e ação antes de explicação",
+   "definicao": "Mostre o que está acontecendo (selo, número, ponto colorido) e o que fazer a seguir (botão). A explicação só aparece quando a pessoa pedir.",
+   "quando": "Toda tela de decisão: painéis, listas, cabeçalhos de detalhe.",
+   "exemplo": "Cartão de integração com `Chave expirada` e o botão `Renovar chave`; o porquê vai num ⓘ.",
+   "anti": "Um parágrafo conta o problema e o botão aparece só no final do texto.",
+   "ctx": [
+    "Configuração",
+    "Operação",
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "krug",
+    "polaris",
+    "refui"
+   ],
+   "antes": "<div class=\"p\">A integração com o provedor de e-mail está desligada porque a chave de acesso expirou. Para voltar a enviar mensagens, abra as configurações e gere uma nova chave.<\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bd er\">Chave expirada<\/span> <span class=\"bt p\">Renovar chave<\/span><\/div>",
+   "prompt": "Reescreva este bloco com estado em selo e uma ação primária; a explicação vai para um ⓘ.",
+   "destaque": false
+  },
+  {
+   "id": "p-uma-acao",
+   "cat": "Princípio",
+   "en": "One primary action",
+   "pt": "Uma ação primária por tela ou bloco",
+   "definicao": "Cada tela ou bloco tem um caminho principal, visualmente mais forte. As demais ações ficam secundárias ou num menu.",
+   "quando": "Barras de ação, cabeçalhos, modais, formulários.",
+   "exemplo": "Modal de pagamento: `Pagar` preenchido; `Voltar` como texto; `Cancelar pedido` dentro do menu ⋯.",
+   "anti": "Três botões preenchidos lado a lado, todos pedindo atenção.",
+   "ctx": [
+    "Operação",
+    "Momento humano"
+   ],
+   "fontes": [
+    "refui",
+    "material",
+    "cooper"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt p\">Pagar<\/span><span class=\"bt p\">Salvar rascunho<\/span><span class=\"bt p\">Cancelar pedido<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt p\">Pagar<\/span><span class=\"bt\">Voltar<\/span><span class=\"bt\">⋯<\/span><\/div>",
+   "prompt": "Deixe uma ação primária neste bloco, 1-2 secundárias e o resto num menu.",
+   "destaque": false
+  },
+  {
+   "id": "p-show",
+   "cat": "Princípio",
+   "en": "Show, don't tell",
+   "pt": "Mostrar, não contar",
+   "definicao": "Prove com a própria interface (preview, número, estado) em vez de descrever em texto. Se um exemplo vivo resolve, o parágrafo sobra.",
+   "quando": "Onboarding, páginas de configuração, estados vazios.",
+   "exemplo": "Ao configurar a marca, a pessoa vê a página já com as cores escolhidas, e não três linhas sobre como ela ficará.",
+   "anti": "Instruções longas descrevendo algo que um preview mostraria em um segundo.",
+   "ctx": [
+    "Momento humano",
+    "Configuração"
+   ],
+   "fontes": [
+    "krug",
+    "nng",
+    "polaris"
+   ],
+   "antes": "<div class=\"p\">Depois de salvar, a página mostrará ao cliente o logotipo, as cores escolhidas e a previsão de entrega logo abaixo do título.<\/div>",
+   "depois": "<div class=\"prev\"><div class=\"pv-h\"><\/div><div class=\"pv-l\"><\/div><div class=\"pv-l s\"><\/div><\/div>",
+   "prompt": "Troque esta explicação por um preview ao vivo; no máximo 1 linha de apoio.",
+   "destaque": false
+  },
+  {
+   "id": "p-2-niveis",
+   "cat": "Princípio",
+   "en": "Progressive disclosure, at most two levels",
+   "pt": "Divulgação progressiva em no máximo 2 níveis",
+   "definicao": "O essencial fica à vista; o detalhe abre sob demanda, no máximo duas camadas (por exemplo, tela e popover). A partir de três, a pessoa se perde.",
+   "quando": "Fórmulas, regras, detalhes técnicos, configurações avançadas.",
+   "exemplo": "Rótulo `Taxa de entrega ⓘ`; a fórmula aparece no tooltip, sem outro clique.",
+   "anti": "Menu recolhível dentro de menu recolhível dentro de modal.",
+   "ctx": [
+    "Configuração",
+    "Operação"
+   ],
+   "fontes": [
+    "nng",
+    "tidwell",
+    "polaris"
+   ],
+   "antes": "<div class=\"ln\">Taxa de entrega: 94 %<\/div><div class=\"p\">Calculada como pedidos entregues no prazo dividido pelo total de pedidos finalizados no período selecionado, excluindo cancelamentos…<\/div>",
+   "depois": "<div class=\"ln\">Taxa de entrega <span class=\"i\">ⓘ<\/span>: <b>94 %<\/b><\/div><div class=\"ln\"><span class=\"tip\">Entregues no prazo ÷ finalizados<\/span><\/div>",
+   "prompt": "Limite a divulgação a 2 níveis: valor à vista, regra no ⓘ.",
+   "destaque": false
+  },
+  {
+   "id": "p-voz-tom",
+   "cat": "Princípio",
+   "en": "Constant voice, variable tone",
+   "pt": "Voz constante, tom variável",
+   "definicao": "A voz do produto é sempre a mesma (clara, curta, em segunda pessoa). O tom muda conforme o que a pessoa está fazendo e sentindo; veja a matriz de tom.",
+   "quando": "Todo texto de interface, de chave de API a e-mail de boas-vindas.",
+   "exemplo": "Chave inválida: tom seco (`Chave inválida. Gere outra.`). Primeiro pedido: tom amigável (`Tudo pronto. Envie o primeiro pedido.`).",
+   "anti": "Piada ou exclamação em mensagem de erro; frieza em tela de boas-vindas.",
+   "ctx": [
+    "Configuração",
+    "Operação",
+    "Momento humano",
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "polaris",
+    "podmajersky",
+    "metts"
+   ],
+   "antes": "<div class=\"ln\">Ops!! Sua chave de API deu problema 😅<\/div>",
+   "depois": "<div class=\"ln\"><b>Chave de API inválida.<\/b> <span class=\"bt\">Gerar nova chave<\/span><\/div>",
+   "prompt": "Ajuste o tom ao contexto: técnico seco em configuração, amigável em onboarding, calmo em erro.",
+   "destaque": false
+  },
+  {
+   "id": "p-cortar",
+   "cat": "Princípio",
+   "en": "Cutting is not hiding",
+   "pt": "Cortar não é esconder o que importa",
+   "definicao": "Se a informação muda a decisão, ela fica visível. Se só explica, vai para a ajuda contextual. Se repete o título ou o vizinho, some.",
+   "quando": "Ao enxugar qualquer tela; antes de mandar algo para o ⓘ.",
+   "exemplo": "O prazo de entrega muda a decisão e fica na linha; a fórmula do prazo vai para o ⓘ.",
+   "anti": "Esconder o custo, o prazo ou o aviso de risco num tooltip porque 'poluía' a tela.",
+   "ctx": [
+    "Operação",
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "nng",
+    "norman",
+    "krug"
+   ],
+   "antes": "<div class=\"ln\">Plano Pro <span class=\"i\">ⓘ<\/span> <span class=\"bt p\">Assinar<\/span><\/div><div class=\"ln mu\">(a cobrança de R$ 49/mês e a fidelidade de 12 meses estão no ⓘ)<\/div>",
+   "depois": "<div class=\"ln\">Plano Pro · <b>R$ 49/mês<\/b> · 12 meses <span class=\"i\">ⓘ<\/span> <span class=\"bt p\">Assinar<\/span><\/div>",
+   "prompt": "Para cada texto cortado: muda a decisão (fica), só explica (ⓘ) ou repete (some)?",
+   "destaque": false
+  },
+  {
+   "id": "p-nao-pensar",
+   "cat": "Princípio",
+   "en": "Don't make me think",
+   "pt": "Não me faça pensar",
+   "definicao": "A tela deve ser autoevidente: a pessoa entende o que é, onde está e o que fazer sem parar para decifrar. Cada ponto de dúvida é um custo.",
+   "quando": "Navegação, rótulos, ações, qualquer ponto de decisão.",
+   "exemplo": "Saldo zerado ao lado do botão `Comprar créditos`: não há o que interpretar.",
+   "anti": "Rótulos criativos, ícones sem texto, termos internos que a pessoa nunca viu.",
+   "ctx": [
+    "Operação",
+    "Momento humano"
+   ],
+   "fontes": [
+    "krug",
+    "norman"
+   ],
+   "antes": "<div class=\"ln\">Saldo: 0 <span class=\"tiny\">⚙<\/span> <span class=\"mu\">(clique no ícone para ver as opções de recarga)<\/span><\/div>",
+   "depois": "<div class=\"ln\">Saldo: 0 créditos <span class=\"bt p\">Comprar créditos<\/span><\/div>",
+   "prompt": "Passe no teste do 'não me faça pensar': cada rótulo e ação se explica sozinho.",
+   "destaque": false
+  },
+  {
+   "id": "p-dados-primeiro",
+   "cat": "Princípio",
+   "en": "Data first, ornament last",
+   "pt": "Dados primeiro, enfeite por último",
+   "definicao": "Em tabelas, gráficos e painéis, cada pixel deve servir ao dado. Bordas, grades, sombras e legendas que não informam só competem com os números.",
+   "quando": "Painéis, relatórios, tabelas e gráficos.",
+   "exemplo": "Barras sem borda, rotuladas no próprio fim (`Ana 62`), sem legenda separada.",
+   "anti": "Gráfico 3D, grade pesada, legenda distante e cores sem significado.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "tufte",
+    "few"
+   ],
+   "antes": "<div style=\"border:2px solid var(--text);padding:6px;border-radius:2px\"><div class=\"bar\" style=\"height:12px;border:2px solid var(--text)\"><i style=\"width:62%\"><\/i><\/div><div class=\"bar\" style=\"height:12px;border:2px solid var(--text)\"><i style=\"width:40%\"><\/i><\/div><div class=\"mu m\">■ Série 1 &nbsp; ■ Série 2<\/div><\/div>",
+   "depois": "<div class=\"ln\">Ana <b>62<\/b><\/div><div class=\"bar\"><i style=\"width:62%\"><\/i><\/div><div class=\"ln\">Bia <b>40<\/b><\/div><div class=\"bar\"><i style=\"width:40%\"><\/i><\/div>",
+   "prompt": "Remova o que não carrega dado: bordas, grade, legenda solta. Rotule direto nas barras.",
+   "destaque": false
+  },
+  {
+   "id": "l-hick",
+   "cat": "Lei",
+   "en": "Hick's Law (Hick–Hyman)",
+   "pt": "Lei de Hick",
+   "definicao": "O tempo para decidir cresce com o número e a complexidade das opções. Menos escolhas à vista, decisão mais rápida.",
+   "quando": "Menus, barras de ação, onboarding, planos e preços.",
+   "exemplo": "Menu da conta com 5 itens e `Mais` para o resto, em vez de 14 links.",
+   "anti": "Seis botões de peso igual lado a lado.",
+   "ctx": [
+    "Operação",
+    "Momento humano"
+   ],
+   "fontes": [
+    "yablonski",
+    "weinschenk"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt\">Perfil<\/span><span class=\"bt\">Faturas<\/span><span class=\"bt\">Equipe<\/span><span class=\"bt\">API<\/span><span class=\"bt\">Webhooks<\/span><span class=\"bt\">Logs<\/span><span class=\"bt\">Tema<\/span><span class=\"bt\">Ajuda<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt\">Perfil<\/span><span class=\"bt\">Faturas<\/span><span class=\"bt\">Equipe<\/span><span class=\"bt\">Mais ▾<\/span><\/div>",
+   "prompt": "Reduza as escolhas à vista: 4-5 opções e o resto agrupado em 'Mais'.",
+   "destaque": false
+  },
+  {
+   "id": "l-fitts",
+   "cat": "Lei",
+   "en": "Fitts's Law",
+   "pt": "Lei de Fitts",
+   "definicao": "O tempo para acertar um alvo depende da distância e do tamanho dele. Alvos maiores e mais próximos são mais fáceis.",
+   "quando": "Ação frequente, mobile, barras de ação fixas.",
+   "exemplo": "Botão `Comprar créditos` com 44 px de altura ao lado do saldo. A Apple recomenda alvos de ao menos 44 pt; o Material, 48 dp.",
+   "anti": "Ação frequente num ícone minúsculo, no canto oposto ao dado.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "hig",
+    "material"
+   ],
+   "antes": "<div class=\"ln\">Saldo: 0 créditos <span class=\"tiny\">+<\/span><\/div>",
+   "depois": "<div class=\"ln\">Saldo: 0 créditos <span class=\"bt p big\">Comprar créditos<\/span><\/div>",
+   "prompt": "Aumente e aproxime a ação mais usada; alvo de toque mínimo de 44 px.",
+   "destaque": false
+  },
+  {
+   "id": "l-miller",
+   "cat": "Lei",
+   "en": "Miller's Law",
+   "pt": "Lei de Miller",
+   "definicao": "A memória de trabalho segura poucos itens ao mesmo tempo (cerca de 7, e menos sob pressão). O ponto prático é agrupar em blocos, não limitar a tela a 7.",
+   "quando": "Painéis com muitas métricas, menus, formulários longos.",
+   "exemplo": "Doze métricas em 3 grupos com título curto: Entrega, Prazo, Contato.",
+   "anti": "Doze métricas iguais numa fila só.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "weinschenk"
+   ],
+   "antes": "<div class=\"ln\">Taxa A · B · C · D · E · F · G · H · I · J · K · L<\/div>",
+   "depois": "<div class=\"ln\"><b>Entrega<\/b> A · B · C<\/div><div class=\"ln\"><b>Prazo<\/b> D · E · F<\/div><div class=\"ln\"><b>Contato<\/b> G · H · I<\/div>",
+   "prompt": "Agrupe em blocos de até 5-7 itens, cada um com título curto (chunking).",
+   "destaque": false
+  },
+  {
+   "id": "l-jakob",
+   "cat": "Lei",
+   "en": "Jakob's Law",
+   "pt": "Lei de Jakob",
+   "definicao": "As pessoas passam a maior parte do tempo em outros produtos e esperam que o seu funcione do mesmo jeito. Convenção reduz o custo de aprender.",
+   "quando": "Navegação, listas, filtros, carrinho, busca, login.",
+   "exemplo": "Lista com busca no topo, filtros e ordenação, como em qualquer admin.",
+   "anti": "Reinventar o padrão de uma ação comum (filtro por gesto secreto).",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "nng",
+    "norman"
+   ],
+   "antes": "<div class=\"ln\">Filtro por gestos secretos<\/div>",
+   "depois": "<div class=\"ln\"><span class=\"fld\">Buscar…<\/span> <span class=\"bt\">Filtros<\/span> <span class=\"bt\">Ordenar<\/span><\/div>",
+   "prompt": "Use o padrão convencional de lista, busca e filtro; só inove onde houver ganho claro.",
+   "destaque": false
+  },
+  {
+   "id": "l-tesler",
+   "cat": "Lei",
+   "en": "Tesler's Law (Conservation of Complexity)",
+   "pt": "Lei de Tesler (conservação da complexidade)",
+   "definicao": "Todo sistema tem uma complexidade irredutível: ou o produto a absorve ou a pessoa. Em geral, é melhor o produto absorver.",
+   "quando": "Formulários, importações, configuração, qualquer entrada de dados.",
+   "exemplo": "O formulário detecta a bandeira do cartão pelo número, em vez de pedir que a pessoa a escolha.",
+   "anti": "Pedir à pessoa dados que o sistema consegue deduzir.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "yablonski",
+    "cooper"
+   ],
+   "antes": "<div class=\"ln\">Bandeira: <span class=\"fld\">escolha…<\/span> Número: <span class=\"fld\">4111…<\/span><\/div>",
+   "depois": "<div class=\"ln\">Número: <span class=\"fld\">4111…<\/span> <span class=\"bd\">Visa<\/span><\/div>",
+   "prompt": "Mova a complexidade para o sistema: deduza, pré-preencha, detecte, em vez de perguntar.",
+   "destaque": false
+  },
+  {
+   "id": "l-zipf",
+   "cat": "Lei",
+   "en": "Principle of Least Effort (Zipf)",
+   "pt": "Lei do esforço mínimo (Zipf)",
+   "definicao": "Pessoas tendem ao caminho de menor esforço para atingir o objetivo (George Zipf, 1949). Se a rota fácil não for a certa, usarão a errada.",
+   "quando": "Fluxos principais, valores padrão, atalhos, caminhos de recuperação.",
+   "exemplo": "A ação mais comum é a pré-selecionada; o caminho raro exige um clique a mais.",
+   "anti": "Tornar o caminho recomendado o mais trabalhoso.",
+   "ctx": [
+    "Operação",
+    "Momento humano"
+   ],
+   "fontes": [
+    "krug",
+    "weinschenk"
+   ],
+   "antes": "<div class=\"ln\">Renovar plano (3 passos, 2 formulários)<\/div><div class=\"ln\">Cancelar plano <span class=\"bt\">1 clique<\/span><\/div>",
+   "depois": "<div class=\"ln\">Renovar plano <span class=\"bt p\">1 clique<\/span><\/div><div class=\"ln mu\">Outras opções<\/div>",
+   "prompt": "Deixe o caminho recomendado como o mais curto; aplique o menor número de passos.",
+   "destaque": false
+  },
+  {
+   "id": "l-vonrestorff",
+   "cat": "Lei",
+   "en": "Von Restorff Effect (Isolation Effect)",
+   "pt": "Efeito Von Restorff (isolamento)",
+   "definicao": "Entre itens parecidos, o que é diferente é o que se lembra. Use contraste para o que importa, e só nele.",
+   "quando": "Planos, CTAs, avisos importantes, item recomendado.",
+   "exemplo": "Um plano marcado `Recomendado` com cor de destaque entre três planos neutros.",
+   "anti": "Destacar tudo: quando tudo grita, nada se destaca.",
+   "ctx": [
+    "Operação",
+    "Momento humano"
+   ],
+   "fontes": [
+    "yablonski",
+    "refui",
+    "weinschenk"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt p\">Básico<\/span><span class=\"bt p\">Pro<\/span><span class=\"bt p\">Empresa<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt\">Básico<\/span><span class=\"bt p\">Pro · Recomendado<\/span><span class=\"bt\">Empresa<\/span><\/div>",
+   "prompt": "Destaque apenas um item (o recomendado) e deixe os demais neutros.",
+   "destaque": false
+  },
+  {
+   "id": "l-serial",
+   "cat": "Lei",
+   "en": "Serial Position Effect",
+   "pt": "Efeito de posição serial",
+   "definicao": "Lembramos melhor o primeiro (primazia) e o último (recência) de uma lista. O meio se perde.",
+   "quando": "Navegação, listas de ações, barra de abas, cardápios.",
+   "exemplo": "Ação mais usada no início da navegação; `Conta` (ou a ação final) no fim. O meio guarda o secundário.",
+   "anti": "Esconder o item mais importante no meio de uma lista longa.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "weinschenk"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt\">Logs<\/span><span class=\"bt\">Tema<\/span><span class=\"bt\">Pedidos<\/span><span class=\"bt\">API<\/span><span class=\"bt\">Ajuda<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt p\">Pedidos<\/span><span class=\"bt\">Logs<\/span><span class=\"bt\">API<\/span><span class=\"bt\">Tema<\/span><span class=\"bt\">Conta<\/span><\/div>",
+   "prompt": "Coloque os itens mais importantes no começo e no fim; o secundário no meio.",
+   "destaque": false
+  },
+  {
+   "id": "l-doherty",
+   "cat": "Lei",
+   "en": "Doherty Threshold",
+   "pt": "Limiar de Doherty",
+   "definicao": "A produtividade dispara quando computador e pessoa respondem um ao outro em menos de ~400 ms. Acima disso, mostre que algo está acontecendo.",
+   "quando": "Salvar, filtrar, buscar, trocar de aba, ações otimistas.",
+   "exemplo": "Ao salvar, o selo muda na hora para `Salvando…` e depois `Salvo`; nada de tela travada.",
+   "anti": "Sem retorno por 2 s ou um spinner que bloqueia a tela inteira.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "nng"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt p\">Salvar<\/span> <span class=\"mu\">… (2 s sem resposta)<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt p\">Salvar<\/span> <span class=\"bd wa\">Salvando…<\/span> → <span class=\"bd ok\">Salvo<\/span><\/div>",
+   "prompt": "Dê feedback em até 400 ms: estado imediato, esqueleto ou ação otimista.",
+   "destaque": false
+  },
+  {
+   "id": "l-peak-end",
+   "cat": "Lei",
+   "en": "Peak–End Rule",
+   "pt": "Regra do pico e do fim",
+   "definicao": "As pessoas julgam uma experiência pelo seu momento mais intenso e pelo final, não pela média. Cuide do pico e do fecho.",
+   "quando": "Conclusão de configuração, pós-compra, fim de fluxo, erros graves.",
+   "exemplo": "Ao terminar a configuração, a tela de sucesso diz o que foi feito e leva à próxima ação.",
+   "anti": "Terminar um fluxo longo com uma tela seca ou um erro sem saída.",
+   "ctx": [
+    "Momento humano",
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "yablonski",
+    "weinschenk",
+    "nng"
+   ],
+   "antes": "<div class=\"ln\">Configuração concluída.<\/div>",
+   "depois": "<div class=\"ln\"><b>Tudo pronto.<\/b> Sua loja já recebe pedidos.<\/div><div class=\"ln\"><span class=\"bt p\">Ver primeiro pedido<\/span><\/div>",
+   "prompt": "Cuide do final do fluxo: confirme o que foi feito e indique a próxima ação.",
+   "destaque": false
+  },
+  {
+   "id": "l-aesthetic",
+   "cat": "Lei",
+   "en": "Aesthetic–Usability Effect",
+   "pt": "Efeito estético–usabilidade",
+   "definicao": "Interfaces bonitas são percebidas como mais fáceis de usar e as pessoas toleram melhor pequenas falhas. Atenção: pode esconder problemas reais em testes.",
+   "quando": "Qualquer tela, sobretudo as primeiras impressões.",
+   "exemplo": "Espaçamento, alinhamento e tipografia consistentes antes de adicionar enfeite.",
+   "anti": "Usar beleza para mascarar um fluxo confuso.",
+   "ctx": [
+    "Momento humano",
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "norman",
+    "refui"
+   ],
+   "antes": "<div class=\"ln\">Nome<br>E-mail<br>Telefone<\/div><div class=\"mu m\">sem alinhamento nem espaçamento<\/div>",
+   "depois": "<div class=\"ln\"><b>Nome<\/b><\/div><div class=\"ln mu\">Ana Souza<\/div><div class=\"ln\" style=\"margin-top:8px\"><b>E-mail<\/b><\/div><div class=\"ln mu\">ana@loja.com<\/div>",
+   "prompt": "Cuide do básico visual (alinhamento, espaçamento, tipografia) antes de qualquer enfeite.",
+   "destaque": false
+  },
+  {
+   "id": "l-proximity",
+   "cat": "Lei",
+   "en": "Law of Proximity (Gestalt)",
+   "pt": "Lei da proximidade (Gestalt)",
+   "definicao": "Itens próximos são percebidos como um grupo. Espaço entre grupos separa; espaço dentro do grupo une.",
+   "quando": "Formulários, cartões, painéis, listas de configurações.",
+   "exemplo": "Campos de endereço juntos, com mais espaço antes do bloco de pagamento.",
+   "anti": "Espaçamento igual entre tudo, sem sinal de grupo.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "yablonski",
+    "few",
+    "refui"
+   ],
+   "antes": "<div class=\"ln\">Nome<\/div><div class=\"ln\">Rua<\/div><div class=\"ln\">Cartão<\/div><div class=\"ln\">CVV<\/div>",
+   "depois": "<div class=\"ln\">Nome<\/div><div class=\"ln\" style=\"margin-top:14px\">Rua<\/div><div class=\"ln\" style=\"margin-top:14px\">Cartão<\/div><div class=\"ln\">CVV<\/div>",
+   "prompt": "Agrupe por proximidade: espaço curto dentro do grupo, espaço largo entre grupos.",
+   "destaque": false
+  },
+  {
+   "id": "l-similarity",
+   "cat": "Lei",
+   "en": "Law of Similarity (Gestalt)",
+   "pt": "Lei da similaridade (Gestalt)",
+   "definicao": "Elementos parecidos (cor, forma, tamanho) são lidos como relacionados. Aparência igual deve significar função igual.",
+   "quando": "Botões, selos, links, cores de estado, ícones.",
+   "exemplo": "Todo selo de sucesso é verde e tem a mesma forma; todo link é sublinhado.",
+   "anti": "Mesma cor para ação e para erro; link e texto indistintos.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "yablonski",
+    "few"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bd ok\">Entregue<\/span> <span class=\"bd\">Atrasado<\/span> <span class=\"bd wa\">Concluído<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bd ok\">Entregue<\/span> <span class=\"bd er\">Atrasado<\/span> <span class=\"bd ok\">Concluído<\/span><\/div>",
+   "prompt": "Use o mesmo estilo para o mesmo significado e estilos diferentes para significados diferentes.",
+   "destaque": false
+  },
+  {
+   "id": "l-postel",
+   "cat": "Lei",
+   "en": "Postel's Law (Robustness Principle)",
+   "pt": "Lei de Postel (robustez)",
+   "definicao": "Seja conservador no que envia e liberal no que aceita. Na interface: tolere formatos variados e normalize por trás.",
+   "quando": "Campos de telefone, CPF, datas, busca, importação.",
+   "exemplo": "Aceitar CPF com ou sem pontos e normalizar ao salvar.",
+   "anti": "Rejeitar um telefone porque tem espaço ou parênteses.",
+   "ctx": [
+    "Erro ou risco",
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "wroblewski"
+   ],
+   "antes": "<div class=\"ln\">CPF: <span class=\"fld\">123.456.789-00<\/span><\/div><div class=\"ln er-t\">Use somente números.<\/div>",
+   "depois": "<div class=\"ln\">CPF: <span class=\"fld\">123.456.789-00<\/span> <span class=\"bd ok\">✓<\/span><\/div>",
+   "prompt": "Aceite formatos variados de entrada e normalize no sistema.",
+   "destaque": false
+  },
+  {
+   "id": "t-01",
+   "cat": "Técnica",
+   "en": "Progressive disclosure",
+   "pt": "Divulgação progressiva",
+   "definicao": "Mostra só o essencial primeiro e deixa o resto sob demanda, em no máximo 2 níveis.",
+   "quando": "Configuração, formulários longos, detalhe de um registro.",
+   "exemplo": "Cartão de domínio mostra `Verificado` e um botão `Ver registros`; os registros DNS ficam atrás.",
+   "anti": "Três níveis de menus recolhíveis; gatilho vago como \"Mais\".",
+   "ctx": [
+    "Configuração",
+    "Operação"
+   ],
+   "fontes": [
+    "nng",
+    "tidwell"
+   ],
+   "antes": "<div class=\"ln\">Nome do domínio<\/div><div class=\"ln\">Registro A: 192.0.2.1 · TTL 300 · proxy desligado<\/div><div class=\"ln\">Registro CNAME: www → loja.exemplo.com<\/div><div class=\"ln\">Registro TXT: v=spf1 include:… ~all<\/div><div class=\"ln\">Verificação: token HMAC e prazo de 90 dias…<\/div>",
+   "depois": "<div class=\"ln\">Nome do domínio <span class=\"bd ok\">Verificado<\/span><\/div><div class=\"ln\"><span class=\"bt\">Ver registros<\/span><\/div>",
+   "prompt": "Aplique divulgação progressiva: só o que se usa em 80% das vezes fica visível, máx. 2 níveis, gatilho claro.",
+   "destaque": true
+  },
+  {
+   "id": "t-02",
+   "cat": "Técnica",
+   "en": "Scannability (F/Z-pattern)",
+   "pt": "Escaneabilidade",
+   "definicao": "A pessoa varre a tela em F: o começo de cada linha recebe a atenção.",
+   "quando": "Listas, cabeçalhos, cartões de resumo.",
+   "exemplo": "Título `Pedidos atrasados` em vez de `Aqui você encontra os pedidos que estão atrasados`.",
+   "anti": "Parágrafo denso; título que começa por palavra vazia.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "nng",
+    "redish",
+    "krug"
+   ],
+   "antes": "<div class=\"p\">Aqui você pode encontrar a lista de todos os pedidos que estão com a entrega atrasada em relação ao prazo previsto.<\/div>",
+   "depois": "<div class=\"ln\"><b>Pedidos atrasados<\/b> <span class=\"bd wa\">12<\/span><\/div><div class=\"ln\">Prazo vencido · Maior atraso: 4 dias<\/div>",
+   "prompt": "Reescreva para escaneabilidade: título começa pela palavra informativa, bullets, sem parágrafo de mais de 2 linhas.",
+   "destaque": false
+  },
+  {
+   "id": "t-03",
+   "cat": "Técnica",
+   "en": "Glanceability",
+   "pt": "Leitura de relance",
+   "definicao": "Entender o estado em 1-2 segundos, sem ler.",
+   "quando": "KPIs, status de integração, cabeçalho de entidade.",
+   "exemplo": "Domínio com selos `DNS ✓` e `HTTPS ✕` lado a lado.",
+   "anti": "Estado dito só em prosa; número sem contexto.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "few",
+    "nng"
+   ],
+   "antes": "<div class=\"ln\">DNS OK · HTTPS falhou · verificado há 2 min<\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bd ok\">DNS ✓<\/span> <span class=\"bd er\">HTTPS ✕<\/span> <span class=\"bt\">Verificar de novo<\/span><\/div><div class=\"ln\"><span class=\"mu\">verificado há 2 min<\/span><\/div>",
+   "prompt": "Faça esta seção passar no teste de 2 segundos: estado e número principal sem ler texto.",
+   "destaque": true
+  },
+  {
+   "id": "t-04",
+   "cat": "Técnica",
+   "en": "Information scent",
+   "pt": "Pista de informação",
+   "definicao": "O rótulo promete o que a pessoa vai encontrar atrás do clique.",
+   "quando": "Navegação, links, cartões de ação.",
+   "exemplo": "`Ver registros DNS` no lugar de `Detalhes`.",
+   "anti": "\"Saiba mais\", \"Detalhes\", \"Clique aqui\".",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "nng",
+    "redish"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt\">Saiba mais<\/span> <span class=\"bt\">Detalhes<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt\">Ver registros DNS<\/span> <span class=\"bt\">Ver Pedidos atrasados<\/span><\/div>",
+   "prompt": "Revise rótulos de navegação e links: cada um diz o que a pessoa encontra ali.",
+   "destaque": false
+  },
+  {
+   "id": "t-05",
+   "cat": "Técnica",
+   "en": "Hick's Law",
+   "pt": "Lei de Hick",
+   "definicao": "Quanto mais escolhas, mais tempo para decidir.",
+   "quando": "Barras de ação, menus, cabeçalhos.",
+   "exemplo": "1 ação primária, 1 secundária e o resto no menu ⋯.",
+   "anti": "Seis botões de peso igual lado a lado.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "nng"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt\">Exportar<\/span><span class=\"bt\">Filtrar<\/span><span class=\"bt\">Importar<\/span><span class=\"bt\">Arquivar<\/span><span class=\"bt\">Duplicar<\/span><span class=\"bt\">Excluir<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt p\">Exportar<\/span><span class=\"bt\">Filtrar<\/span><span class=\"bt\">⋯<\/span><\/div>",
+   "prompt": "Reduza as escolhas: 1 primária, 1-2 secundárias, o resto em menu.",
+   "destaque": true
+  },
+  {
+   "id": "t-06",
+   "cat": "Técnica",
+   "en": "Fitts's Law",
+   "pt": "Lei de Fitts",
+   "definicao": "Alvos maiores e mais próximos são mais rápidos de acertar.",
+   "quando": "Ação frequente, principalmente no celular.",
+   "exemplo": "Botão `Comprar créditos` com 44 px de altura ao lado do saldo.",
+   "anti": "Ação frequente em ícone minúsculo, longe do dado.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "hig",
+    "material"
+   ],
+   "antes": "<div class=\"ln\">Saldo: 0 créditos <span class='tiny'>+<\/span><\/div>",
+   "depois": "<div class=\"ln\">Saldo: 0 créditos <span class=\"bt p big\">Comprar créditos<\/span><\/div>",
+   "prompt": "Aumente e aproxime a ação mais usada; alvo mínimo de 44 px no mobile.",
+   "destaque": false
+  },
+  {
+   "id": "t-07",
+   "cat": "Técnica",
+   "en": "Miller's Law",
+   "pt": "Lei de Miller",
+   "definicao": "A memória de trabalho segura cerca de 7 itens.",
+   "quando": "Agrupar métricas e menus.",
+   "exemplo": "Métricas em 3 grupos com título curto.",
+   "anti": "Doze métricas iguais numa lista corrida.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "weinschenk"
+   ],
+   "antes": "<div class=\"ln\">Taxa A · B · C · D · E · F · G · H · I · J · K · L<\/div>",
+   "depois": "<div class=\"ln\"><b>Entrega<\/b> A · B · C<\/div><div class=\"ln\"><b>Prazo<\/b> D · E · F<\/div><div class=\"ln\"><b>Contato<\/b> G · H · I<\/div>",
+   "prompt": "Agrupe em blocos de até 5-7 itens com título curto.",
+   "destaque": false
+  },
+  {
+   "id": "t-08",
+   "cat": "Técnica",
+   "en": "Recognition over recall",
+   "pt": "Reconhecimento em vez de memorização",
+   "definicao": "Mostrar opções visíveis em vez de exigir que a pessoa lembre.",
+   "quando": "Filtros, busca, seleção de Template ou Fonte.",
+   "exemplo": "Seletor de modelo com os recentes à vista e o padrão marcado.",
+   "anti": "Campo livre onde cabia uma lista.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "nng",
+    "norman"
+   ],
+   "antes": "<div class=\"ln\">Modelo: <span class=\"fld\">digite o código…<\/span><\/div>",
+   "depois": "<div class=\"ln\">Modelo: <span class=\"bd n\">Padrão<\/span> Recentes: Essencial · Detalhado<\/div>",
+   "prompt": "Troque campo de texto livre por seleção com opções visíveis e recentes.",
+   "destaque": false
+  },
+  {
+   "id": "t-09",
+   "cat": "Técnica",
+   "en": "Show, don't tell",
+   "pt": "Mostrar, não explicar",
+   "definicao": "Trocar a instrução por um exemplo ou preview vivo.",
+   "quando": "Onboarding, vazios.",
+   "exemplo": "Preview da página pública em vez do texto explicando como ela fica.",
+   "anti": "Parágrafo que um preview resolveria.",
+   "ctx": [
+    "Momento humano",
+    "Configuração"
+   ],
+   "fontes": [
+    "nng",
+    "polaris"
+   ],
+   "antes": "<div class=\"p\">A página de acompanhamento mostra ao cliente o mapa, as etapas e a previsão de entrega com as cores da sua loja…<\/div>",
+   "depois": "<div class=\"prev\"><div class=\"pv-h\"><\/div><div class=\"pv-l\"><\/div><div class=\"pv-l s\"><\/div><\/div>",
+   "prompt": "Troque a explicação por um exemplo vivo ou preview; no máximo 1 linha de apoio.",
+   "destaque": false
+  },
+  {
+   "id": "t-10",
+   "cat": "Técnica",
+   "en": "Inline & bulk actions",
+   "pt": "Ações na linha e em lote",
+   "definicao": "Ação onde está o dado; seleção múltipla abre barra de ações.",
+   "quando": "Listas de Pedidos, Fontes, Domínios.",
+   "exemplo": "Linha de pedido com `Reenviar`; ao marcar 3, a barra `3 selecionados · Arquivar`.",
+   "anti": "Ir a outra página para uma ação simples.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "tidwell",
+    "cooper"
+   ],
+   "antes": "<div class=\"ln\">Pedido #1042 → abrir detalhe → menu → Reenviar<\/div>",
+   "depois": "<div class=\"ln\">Pedido #1042 <span class=\"bd wa\">Atrasado<\/span> <span class=\"bt\">Reenviar<\/span><\/div><div class=\"ln\"><span class=\"mu\">3 selecionados · <\/span><span class=\"bt\">Arquivar<\/span><\/div>",
+   "prompt": "Mova ações frequentes para a linha e adicione barra de ações em lote ao selecionar.",
+   "destaque": true
+  },
+  {
+   "id": "t-11",
+   "cat": "Técnica",
+   "en": "Actionable empty state",
+   "pt": "Estado vazio acionável",
+   "definicao": "Diz o que a área mostrará, por que está vazia e dá a primeira ação.",
+   "quando": "Toda lista ou seção que pode ficar vazia.",
+   "exemplo": "`Nenhuma integração ainda. Conecte a primeira para receber pedidos.` + botão.",
+   "anti": "Tela em branco, \"Nenhum dado\", \"—\" sozinho.",
+   "ctx": [
+    "Momento humano"
+   ],
+   "fontes": [
+    "nng",
+    "polaris"
+   ],
+   "antes": "<div class=\"ln\">—<\/div>",
+   "depois": "<div class=\"ln\"><b>Nenhuma integração ainda<\/b><\/div><div class=\"ln\">Conecte a primeira para receber pedidos.<\/div><div class=\"ln\"><span class=\"bt p\">Adicionar integração<\/span><\/div>",
+   "prompt": "Neste vazio: 1 linha do que aparecerá, 1 botão de primeira ação, 1 link de ajuda opcional.",
+   "destaque": true
+  },
+  {
+   "id": "t-12",
+   "cat": "Técnica",
+   "en": "Setup checklist",
+   "pt": "Checklist de configuração",
+   "definicao": "Até 5 passos auto-marcados, com progresso, dispensáveis.",
+   "quando": "Primeira configuração da Operação.",
+   "exemplo": "`2 de 4 prontos` com botão em cada passo pendente.",
+   "anti": "Tutorial longo e bloqueante com marcação manual.",
+   "ctx": [
+    "Momento humano"
+   ],
+   "fontes": [
+    "polaris",
+    "nng"
+   ],
+   "antes": "<div class=\"p\">Passo 1: crie sua conta. Passo 2: configure a loja. Passo 3: conecte o pagamento. Passo 4: publique a página. Passo 5: envie um teste. Passo 6…<\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bd ok\">✓<\/span> Loja <span class=\"bd ok\">✓<\/span> Pagamento<\/div><div class=\"ln\">○ Página <span class=\"bt\">Publicar<\/span><\/div><div class=\"ln\"><div class=\"bar\"><i style=\"width:50%\"><\/i><\/div><span class=\"mu\">2 de 4 prontos<\/span><\/div>",
+   "prompt": "Monte um checklist de até 5 passos, auto-concluídos, com progresso e botão por passo.",
+   "destaque": true
+  },
+  {
+   "id": "t-13",
+   "cat": "Técnica",
+   "en": "Status badge",
+   "pt": "Selo de status",
+   "definicao": "1-2 palavras, no passado ou estado, com tom fixo por status.",
+   "quando": "Tabelas, cabeçalhos de entidade.",
+   "exemplo": "`Conectado`, `Pausado`, `Entregue`, `Sem créditos`.",
+   "anti": "Selo com frase; cores diferentes para o mesmo status.",
+   "ctx": [
+    "Operação",
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "polaris",
+    "material"
+   ],
+   "antes": "<div class=\"ln\">Esta entrega foi concluída com sucesso<\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bd ok\">Entregue<\/span> <span class=\"bd wa\">Pausado<\/span> <span class=\"bd er\">Sem créditos<\/span><\/div>",
+   "prompt": "Padronize os selos: 1-2 palavras (Entregue, Pausado), tom fixo por status.",
+   "destaque": true
+  },
+  {
+   "id": "t-14",
+   "cat": "Técnica",
+   "en": "KPI card with delta",
+   "pt": "Cartão de KPI com variação",
+   "definicao": "Valor grande, rótulo curto, delta com sinal e período.",
+   "quando": "Visão geral, créditos, pedidos, e-mails.",
+   "exemplo": "Pedidos: 128 · +12% vs 7 dias, com mini-tendência.",
+   "anti": "Número sem comparação; descrição longa.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "few",
+    "tufte",
+    "polaris"
+   ],
+   "antes": "<div class=\"ln\">Total de Pedidos criados no período selecionado: 128<\/div>",
+   "depois": "<div class=\"kpi\"><span class=\"mu\">Pedidos<\/span><b>128<\/b><span class=\"bd ok\">+12% · 7 dias<\/span><\/div>",
+   "prompt": "Cada KPI: valor, rótulo de 1-3 palavras, delta com sinal e período, sem parágrafo.",
+   "destaque": true
+  },
+  {
+   "id": "t-15",
+   "cat": "Técnica",
+   "en": "Smart defaults",
+   "pt": "Padrões inteligentes",
+   "definicao": "Pré-preencher o valor mais provável.",
+   "quando": "Formulários, fontes, modelos.",
+   "exemplo": "Fuso `horário de Brasília` já selecionado, com `Alterar`.",
+   "anti": "Campo obrigatório vazio com resposta óbvia.",
+   "ctx": [
+    "Configuração",
+    "Momento humano"
+   ],
+   "fontes": [
+    "wroblewski",
+    "tidwell",
+    "cooper"
+   ],
+   "antes": "<div class=\"ln\">Fuso: <span class='fld'>escolha…<\/span><\/div>",
+   "depois": "<div class=\"ln\">Fuso: horário de Brasília <span class=\"bt\">Alterar<\/span><\/div>",
+   "prompt": "Pré-preencha com o padrão mais provável e deixe 'Alterar' discreto.",
+   "destaque": true
+  },
+  {
+   "id": "t-16",
+   "cat": "Técnica",
+   "en": "Contextual help",
+   "pt": "Ajuda contextual",
+   "definicao": "Explicação curta ligada ao rótulo, em tooltip ou popover (ⓘ).",
+   "quando": "Fórmulas, termos do domínio, campos técnicos.",
+   "exemplo": "Taxa de sucesso com ⓘ `Concluídos sem falha ÷ Total concluído`.",
+   "anti": "Parágrafo de ajuda sob cada campo.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "nng",
+    "polaris"
+   ],
+   "antes": "<div class=\"ln\">Taxa de sucesso: 72,5 %<\/div><div class=\"ln\"><div class=\"p\">Calculada como o número de pedidos concluídos sem nenhuma falha dividido pelo total de pedidos concluídos no período…<\/div><\/div>",
+   "depois": "<div class=\"ln\">Taxa de sucesso <span class=\"i\" title=\"ajuda\">ⓘ<\/span>: <b>72,5 %<\/b><\/div><div class=\"ln\"><span class=\"tip\">Concluídos sem falha ÷ Total concluído<\/span><\/div>",
+   "prompt": "Mova explicações para tooltip/popover de 1-2 linhas ligado ao rótulo.",
+   "destaque": true
+  },
+  {
+   "id": "t-17",
+   "cat": "Técnica",
+   "en": "Front-loading",
+   "pt": "Informação à frente",
+   "definicao": "A palavra-chave nas primeiras palavras.",
+   "quando": "Títulos, botões, mensagens.",
+   "exemplo": "`Sem créditos: pedidos aguardam`.",
+   "anti": "\"Você pode, a qualquer momento, adicionar…\".",
+   "ctx": [
+    "Operação",
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "nng",
+    "polaris",
+    "redish"
+   ],
+   "antes": "<div class=\"ln\">Os novos Pedidos esperam até você solicitar mais créditos<\/div>",
+   "depois": "<div class=\"ln\"><b>Sem créditos.<\/b> Pedidos aguardam.<\/div>",
+   "prompt": "Reescreva cada frase com a informação-chave nas 3 primeiras palavras.",
+   "destaque": true
+  },
+  {
+   "id": "t-18",
+   "cat": "Técnica",
+   "en": "Action verbs on buttons",
+   "pt": "Verbos nos botões",
+   "definicao": "Verbo + objeto, até 3 palavras; o destrutivo nomeia o objeto.",
+   "quando": "Todo botão.",
+   "exemplo": "`Excluir domínio` no lugar de `OK`.",
+   "anti": "\"OK\", \"Enviar\", \"Continuar\", \"Clique aqui\".",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "polaris",
+    "podmajersky",
+    "metts"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"bt\">OK<\/span> <span class=\"bt\">Enviar<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt\">Excluir domínio<\/span> <span class=\"bt p\">Ligar e-mails<\/span><\/div>",
+   "prompt": "Todo botão: verbo + objeto, máx. 3 palavras; destrutivo nomeia o que será excluído.",
+   "destaque": true
+  },
+  {
+   "id": "t-19",
+   "cat": "Técnica",
+   "en": "Skeleton screens",
+   "pt": "Esqueletos de carregamento",
+   "definicao": "Placeholder com a forma do conteúdo, só em carga de página.",
+   "quando": "Listas e cartões que carregam.",
+   "exemplo": "Três linhas cinza no lugar da tabela enquanto ela carrega.",
+   "anti": "Spinner de tela inteira; skeleton para upload.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "nng",
+    "material"
+   ],
+   "antes": "<div class=\"ln\"><span class=\"spin\">◌ Carregando…<\/span><\/div>",
+   "depois": "<div class=\"sk\"><\/div><div class=\"sk\"><\/div><div class=\"sk s\"><\/div>",
+   "prompt": "Use skeleton com a estrutura real para carga de página; barra de progresso para tarefa longa.",
+   "destaque": false
+  },
+  {
+   "id": "t-20",
+   "cat": "Técnica",
+   "en": "Jakob, Tesler & Doherty",
+   "pt": "Convenção, Tesler e Doherty",
+   "definicao": "Convenção familiar; a complexidade só muda de lugar; feedback em até 400 ms.",
+   "quando": "Padrões de lista, filtro e feedback.",
+   "exemplo": "Lista + busca + filtro, como em qualquer admin; feedback em até 400 ms.",
+   "anti": "Inventar um padrão novo para uma ação comum.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "yablonski",
+    "nng"
+   ],
+   "antes": "<div class=\"ln\">Filtro por gestos secretos<\/div>",
+   "depois": "<div class=\"ln\"><span class='fld'>Buscar…<\/span> <span class=\"bt\">Filtros<\/span> <span class=\"bt\">Ordenar<\/span><\/div>",
+   "prompt": "Use o padrão convencional de lista, filtro e busca; dê feedback em até 400 ms.",
+   "destaque": false
+  },
+  {
+   "id": "t-21",
+   "cat": "Técnica",
+   "en": "Inline validation",
+   "pt": "Validação em linha",
+   "definicao": "Valida o campo enquanto (ou assim que) a pessoa o preenche, com a mensagem ao lado do campo, e não só no envio.",
+   "quando": "Formulários com formato (e-mail, CPF, domínio, senha).",
+   "exemplo": "Ao sair do campo de e-mail, aparece `Falta o domínio. Exemplo: ana@loja.com` ao lado.",
+   "anti": "Mostrar um banner `Há erros no formulário` só depois do clique em Salvar.",
+   "ctx": [
+    "Erro ou risco",
+    "Configuração"
+   ],
+   "fontes": [
+    "wroblewski",
+    "nng"
+   ],
+   "antes": "<div class=\"ln\">E-mail: <span class=\"fld\">ana@@gmail<\/span><\/div><div class=\"ln\"><span class=\"bt p\">Salvar<\/span><\/div><div class=\"ln er-t\">Há erros no formulário.<\/div>",
+   "depois": "<div class=\"ln\">E-mail: <span class=\"fld\" style=\"border-color:var(--er)\">ana@@gmail<\/span><\/div><div class=\"ln er-t\">Falta o domínio. Exemplo: ana@loja.com<\/div>",
+   "prompt": "Valide cada campo ao sair dele; a mensagem fica ao lado, diz o que está errado e dá um exemplo.",
+   "destaque": false
+  },
+  {
+   "id": "t-22",
+   "cat": "Técnica",
+   "en": "Undo instead of confirm",
+   "pt": "Desfazer em vez de confirmar",
+   "definicao": "Para ações reversíveis, execute e ofereça `Desfazer`, em vez de interromper com `Tem certeza?`. Reserve a confirmação para o que é irreversível.",
+   "quando": "Arquivar, mover, excluir com lixeira, editar em lote.",
+   "exemplo": "Aviso `Domínio arquivado` com o botão `Desfazer` por alguns segundos.",
+   "anti": "`Tem certeza?` antes de toda ação, treinando a pessoa a clicar sem ler.",
+   "ctx": [
+    "Operação",
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "norman",
+    "cooper",
+    "nng"
+   ],
+   "antes": "<div class=\"ln\"><b>Arquivar domínio?<\/b> Tem certeza?<\/div><div class=\"ln\"><span class=\"bt\">Cancelar<\/span><span class=\"bt p\">Arquivar<\/span><\/div>",
+   "depois": "<div class=\"ln\"><span class=\"tip\">Domínio arquivado · <b>Desfazer<\/b><\/span><\/div>",
+   "prompt": "Troque o modal de confirmação por um 'Desfazer' nas ações reversíveis; confirme só o irreversível.",
+   "destaque": false
+  },
+  {
+   "id": "t-23",
+   "cat": "Técnica",
+   "en": "Visual hierarchy",
+   "pt": "Hierarquia visual",
+   "definicao": "Use tamanho, peso, cor e posição para dizer o que é primário, secundário e terciário. A atenção segue o contraste.",
+   "quando": "Cabeçalhos de entidade, linhas de lista, cartões, formulários.",
+   "exemplo": "Pedido em negrito e maior, cliente e data em cinza, status em selo.",
+   "anti": "Todas as linhas com o mesmo peso e cor.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "refui",
+    "tidwell"
+   ],
+   "antes": "<div class=\"ln\">Pedido 1042<\/div><div class=\"ln\">Ana Souza<\/div><div class=\"ln\">12 jan<\/div><div class=\"ln\">Entregue<\/div>",
+   "depois": "<div class=\"ln\"><b>Pedido 1042<\/b> <span class=\"bd ok\">Entregue<\/span><\/div><div class=\"ln mu\">Ana Souza · 12 jan<\/div>",
+   "prompt": "Estabeleça hierarquia: 1 elemento primário, apoio em cinza, estado em selo.",
+   "destaque": false
+  },
+  {
+   "id": "t-24",
+   "cat": "Técnica",
+   "en": "Plain language",
+   "pt": "Linguagem simples",
+   "definicao": "Palavras comuns, frases curtas, voz ativa, sem jargão interno. Escreva como se explicasse a alguém que só quer terminar a tarefa.",
+   "quando": "Todo texto de interface, especialmente erros e avisos.",
+   "exemplo": "`Não foi possível salvar. Tente de novo.` no lugar de uma frase burocrática.",
+   "anti": "`Em decorrência da indisponibilidade…`, voz passiva e termos internos.",
+   "ctx": [
+    "Operação",
+    "Erro ou risco",
+    "Momento humano"
+   ],
+   "fontes": [
+    "redish",
+    "metts",
+    "polaris"
+   ],
+   "antes": "<div class=\"ln\">Em decorrência da indisponibilidade momentânea do serviço, não foi possível efetuar a operação solicitada.<\/div>",
+   "depois": "<div class=\"ln\"><b>Não foi possível salvar.<\/b> Tente de novo.<\/div>",
+   "prompt": "Reescreva em linguagem simples: voz ativa, palavras comuns, até 12 palavras por frase.",
+   "destaque": false
+  },
+  {
+   "id": "t-25",
+   "cat": "Técnica",
+   "en": "Helpful error messages",
+   "pt": "Mensagens de erro úteis",
+   "definicao": "O erro diz o que aconteceu, por quê (se ajudar) e o que fazer, com a ação à mão. Sem culpar a pessoa, sem códigos soltos.",
+   "quando": "Falhas de formulário, de integração, de pagamento, de importação.",
+   "exemplo": "`Não foi possível publicar. Falta o endereço de entrega no passo 2.` + `Ir para o passo 2`.",
+   "anti": "`Erro 500` ou `Algo deu errado` sem saída.",
+   "ctx": [
+    "Erro ou risco"
+   ],
+   "fontes": [
+    "podmajersky",
+    "nng",
+    "polaris",
+    "wroblewski"
+   ],
+   "antes": "<div class=\"ln er-t\">Erro 500: falha inesperada. Tente novamente mais tarde.<\/div>",
+   "depois": "<div class=\"ln er-t\"><b>Não foi possível publicar.<\/b><\/div><div class=\"ln\">Falta o endereço de entrega no passo 2.<\/div><div class=\"ln\"><span class=\"bt p\">Ir para o passo 2<\/span><\/div>",
+   "prompt": "Reescreva o erro: o que houve, o que fazer, e um botão que leva direto ao conserto.",
+   "destaque": false
+  },
+  {
+   "id": "t-26",
+   "cat": "Técnica",
+   "en": "Data-ink ratio",
+   "pt": "Razão dados–tinta",
+   "definicao": "Maximize a parte da tinta que representa dados e apague o resto: grade pesada, bordas, sombras, decorações.",
+   "quando": "Gráficos, tabelas e painéis.",
+   "exemplo": "Tabela só com linhas horizontais leves; gráfico sem grade, valores no fim da barra.",
+   "anti": "Gráfico 3D com borda grossa e legenda distante.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "tufte",
+    "few"
+   ],
+   "antes": "<div style=\"border:2px solid var(--text);padding:6px\"><div class=\"bar\" style=\"height:12px;border:2px solid var(--text)\"><i style=\"width:70%\"><\/i><\/div><div class=\"mu m\">■ Série 1<\/div><\/div>",
+   "depois": "<div class=\"ln\">Abril <b>70<\/b><\/div><div class=\"bar\"><i style=\"width:70%\"><\/i><\/div>",
+   "prompt": "Aplique a razão dados-tinta: remova grade, bordas e legenda solta; rotule direto no gráfico.",
+   "destaque": false
+  },
+  {
+   "id": "t-27",
+   "cat": "Técnica",
+   "en": "Signifiers",
+   "pt": "Sinalizadores (signifiers)",
+   "definicao": "Faça o elemento mostrar como pode ser usado: um botão parece botão, um link parece link, um campo parece campo. O sinal vem da forma, não de instrução.",
+   "quando": "Botões, links, áreas clicáveis, controles personalizados.",
+   "exemplo": "Botão com contorno e rótulo `+ Adicionar domínio`, em vez de texto solto.",
+   "anti": "Texto que é clicável mas parece rótulo.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "norman",
+    "hig"
+   ],
+   "antes": "<div class=\"ln mu\">Adicionar domínio<\/div>",
+   "depois": "<div class=\"ln\"><span class=\"bt\">+ Adicionar domínio<\/span><\/div>",
+   "prompt": "Garanta que tudo o que é clicável pareça clicável, e o que não é, não pareça.",
+   "destaque": false
+  },
+  {
+   "id": "t-28",
+   "cat": "Técnica",
+   "en": "Numbers that align",
+   "pt": "Números alinhados e formatados",
+   "definicao": "Alinhe números à direita, com casas fixas e separadores do idioma, e fonte de algarismos tabulares. Comparar fica imediato.",
+   "quando": "Tabelas financeiras, KPIs, extratos.",
+   "exemplo": "`R$ 1.234,50` / `R$ 98,46` / `R$ 7,00`, alinhados pela vírgula.",
+   "anti": "Números alinhados à esquerda, com casas diferentes.",
+   "ctx": [
+    "Operação"
+   ],
+   "fontes": [
+    "few",
+    "tufte",
+    "refui"
+   ],
+   "antes": "<div class=\"ln\">R$ 1234.5<\/div><div class=\"ln\">R$ 98,456<\/div><div class=\"ln\">R$ 7<\/div>",
+   "depois": "<div style=\"max-width:110px;text-align:right;font-variant-numeric:tabular-nums\"><div class=\"ln\">R$ 1.234,50<\/div><div class=\"ln\">R$ 98,46<\/div><div class=\"ln\">R$ 7,00<\/div><\/div>",
+   "prompt": "Alinhe números à direita, com casas fixas, separadores pt-BR e algarismos tabulares.",
+   "destaque": false
+  },
+  {
+   "id": "t-29",
+   "cat": "Técnica",
+   "en": "Grouping with space",
+   "pt": "Agrupar com espaço",
+   "definicao": "Use espaço em branco, mais do que linhas e caixas, para separar grupos. O olho entende a estrutura sem enfeite.",
+   "quando": "Formulários longos, páginas de configuração, cartões.",
+   "exemplo": "Dois grupos (`Contato` e `Endereço`) separados por um intervalo maior, sem divisórias.",
+   "anti": "Uma linha divisória e uma caixa para cada campo.",
+   "ctx": [
+    "Configuração",
+    "Operação"
+   ],
+   "fontes": [
+    "refui",
+    "yablonski",
+    "weinschenk"
+   ],
+   "antes": "<div class=\"ln\">Nome<\/div><div class=\"ln\">Sobrenome<\/div><div class=\"ln\">Rua<\/div><div class=\"ln\">Cidade<\/div>",
+   "depois": "<div class=\"ln mu m\">Contato<\/div><div class=\"ln\">Nome<\/div><div class=\"ln\">Sobrenome<\/div><div class=\"ln mu m\" style=\"margin-top:14px\">Endereço<\/div><div class=\"ln\">Rua<\/div><div class=\"ln\">Cidade<\/div>",
+   "prompt": "Agrupe os campos com espaço e títulos curtos; tire divisórias e caixas que não ajudam.",
+   "destaque": false
+  },
+  {
+   "id": "t-30",
+   "cat": "Técnica",
+   "en": "One term per concept",
+   "pt": "Um termo por conceito",
+   "definicao": "Escolha uma palavra para cada ideia e use-a em todo lugar: menu, título, botão, e-mail, documentação. Sinônimos fazem a pessoa achar que são coisas diferentes.",
+   "quando": "Todo o produto; glossário compartilhado entre design, texto e código.",
+   "exemplo": "`Pedidos` na navegação, no título e no botão `Ver pedidos`.",
+   "anti": "`Pedidos`, `Ordens` e `Compras` para a mesma coisa.",
+   "ctx": [
+    "Operação",
+    "Configuração"
+   ],
+   "fontes": [
+    "podmajersky",
+    "metts",
+    "polaris"
+   ],
+   "antes": "<div class=\"ln\">Menu: Ordens<\/div><div class=\"ln\">Título: Suas compras<\/div><div class=\"ln\"><span class=\"bt\">Ver pedidos<\/span><\/div>",
+   "depois": "<div class=\"ln\">Menu: Pedidos<\/div><div class=\"ln\">Título: Pedidos<\/div><div class=\"ln\"><span class=\"bt\">Ver pedidos<\/span><\/div>",
+   "prompt": "Use um termo por conceito em toda a interface; liste os sinônimos a eliminar.",
+   "destaque": false
+  }
+ ],
+ "pedirLead": "Frases prontas. Cole e troque o nome da tela. Para o fluxo inteiro: \"Use a skill <b>cx-actionable-ui<\/b> na tela de Domínios.\""
+}</script>
+<script>
+(function(){
+var D=JSON.parse(document.getElementById('dados').textContent);
+var CATS=['Princípio','Lei','Técnica'],PLUR={'Princípio':'Princípios','Lei':'Leis','Técnica':'Técnicas'},IDS={'Princípio':'principios','Lei':'leis','Técnica':'tecnicas'};
+var CTX=['Configuração','Operação','Momento humano','Erro ou risco'];
+var S={q:'',cat:'',ctx:'',src:''};
+var FON={};D.fontes.forEach(function(f){FON[f.id]=f});
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmt(s){return esc(s).replace(/`([^`]+)`/g,'<code>$1</code>')}
+function norm(s){return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()}
+// numeração por categoria
+var N={};CATS.forEach(function(c){N[c]=0});D.itens.forEach(function(it){it._n=++N[it.cat]});
+function hay(it){return norm([it.en,it.pt,it.definicao,it.quando,it.exemplo,it.anti,it.prompt,(it.pl&&it.pl.exemplo)||'',it.fontes.map(function(f){return FON[f]?FON[f].autor+' '+FON[f].titulo:''}).join(' ')].join(' '))}
+D.itens.forEach(function(it){it._h=hay(it)});
+function match(it){
+ if(S.cat&&it.cat!==S.cat)return false;
+ if(S.ctx&&it.ctx.indexOf(S.ctx)<0)return false;
+ if(S.src&&it.fontes.indexOf(S.src)<0)return false;
+ if(S.q&&it._h.indexOf(norm(S.q))<0)return false;
+ return true}
+function card(it){
+ var pl=it.pl||{};
+ var a=pl.antes||it.antes,d=pl.depois||it.depois;
+ var h='<section class="card" id="'+esc(it.id)+'"><header><span class="num">'+esc(it.cat)+' '+String(it._n).padStart(2,'0')+'</span><h3>'+esc(it.en)+'</h3><span class="pt">'+esc(it.pt)+'</span></header>';
+ h+='<dl><dt>Definição</dt><dd>'+fmt(it.definicao)+'</dd><dt>Quando usar</dt><dd>'+fmt(it.quando)+'</dd><dt>Exemplo real</dt><dd>'+fmt(it.exemplo)+'</dd><dt>Anti-padrão</dt><dd>'+fmt(it.anti)+'</dd></dl>';
+ if(pl.exemplo)h+='<div class="pl"><b>'+esc(D.rotuloPl||'No projeto')+'</b>'+fmt(pl.exemplo)+'</div>';
+ h+='<div class="ba"><div class="col m"><b class="lb">Antes</b>'+a+'</div><div class="col after m"><b class="lb">Depois</b>'+d+'</div></div>';
+ h+='<div class="say"><div><small>Peça a um agente</small><span class="ptxt">'+esc(it.prompt)+'</span></div><button type="button" class="copy" data-copy="'+esc(it.prompt)+'">Copiar</button></div>';
+ h+='<div class="tags"><span class="lbl">Fonte</span>';
+ it.fontes.forEach(function(f){if(FON[f])h+='<a class="src" href="#livro-'+esc(f)+'" title="'+esc(FON[f].titulo)+'">'+esc(FON[f].curto)+'</a>'});
+ h+='<span class="lbl" style="margin-left:8px">Contexto</span>';
+ it.ctx.forEach(function(c){h+='<span class="ctxt">'+esc(c)+'</span>'});
+ h+='</div></section>';return h}
+function render(){
+ var out='',tot=0;
+ CATS.forEach(function(c){
+  var its=D.itens.filter(function(it){return it.cat===c});
+  var ok=its.filter(match);tot+=ok.length;
+  out+='<h2 id="'+IDS[c]+'">'+PLUR[c]+' <span class="num">'+ok.length+(ok.length!==its.length?' de '+its.length:'')+'</span></h2>';
+  out+=ok.length?ok.map(card).join(''):'<div class="empty">Nada nesta seção para os filtros atuais.</div>'});
+ $('lista').innerHTML=out;
+ $('count').textContent=tot+' de '+D.itens.length+' itens';
+ chips();}
+function chip(label,on,fn,id){return '<button type="button" class="chip" aria-pressed="'+on+'" data-'+fn+'="'+esc(id)+'">'+esc(label)+'</button>'}
+function chips(){
+ $('f-cat').innerHTML='<span class="lbl">Categoria</span>'+chip('Todas',!S.cat,'cat','')+CATS.map(function(c){return chip(c,S.cat===c,'cat',c)}).join('');
+ $('f-ctx').innerHTML='<span class="lbl">Tom / contexto</span>'+chip('Todos',!S.ctx,'ctx','')+CTX.map(function(c){return chip(c,S.ctx===c,'ctx',c)}).join('');
+ var fs=$('f-src');fs.hidden=!S.src;
+ if(S.src&&FON[S.src])fs.innerHTML='<span class="lbl">Fonte</span>'+chip(FON[S.src].titulo.split(':')[0]+' ✕',true,'src','')}
+document.addEventListener('click',function(e){
+ var t=e.target.closest('button');if(!t)return;
+ if(t.dataset.cat!==undefined){S.cat=t.dataset.cat;render()}
+ else if(t.dataset.ctx!==undefined){S.ctx=t.dataset.ctx;render()}
+ else if(t.dataset.src!==undefined){S.src=t.dataset.src;render()}
+ else if(t.dataset.fsrc){S.src=t.dataset.fsrc;S.cat='';S.ctx='';S.q='';$('q').value='';render();window.scrollTo(0,$('lista').offsetTop-140)}
+ else if(t.dataset.copy){var tx=t.dataset.copy;try{navigator.clipboard.writeText(tx);t.textContent='Copiado';setTimeout(function(){t.textContent='Copiar'},1200)}catch(_){}}});
+$('q').addEventListener('input',function(){S.q=this.value;render()});
+// tons
+$('tons').innerHTML=D.tons.map(function(t){return '<tr><td>'+esc((D.perfil==='projeto'&&t.pl)||t.ctx)+'</td><td>'+esc(t.tom)+'</td><td>'+t.ex+'</td></tr>'}).join('');
+// como pedir
+$('pedir-lead').innerHTML=D.pedirLead;
+$('pedir-lista').innerHTML=D.itens.filter(function(i){return i.destaque}).map(function(i){return '<div class="say"><div><small>'+esc(i.pt)+'</small>'+esc(i.prompt)+'</div><button type="button" class="copy" data-copy="'+esc(i.prompt)+'">Copiar</button></div>'}).join('');
+// livros
+function cited(id){return D.itens.filter(function(i){return i.fontes.indexOf(id)>=0})}
+function bookHTML(f){var c=cited(f.id);return '<article class="card book" id="livro-'+esc(f.id)+'"><h3>'+esc(f.titulo)+'</h3><div class="meta">'+esc(f.autor)+' · '+esc(f.edicao)+'</div><p>'+esc(f.ensina)+'</p><div class="booklinks"><a class="ext" href="'+esc(f.url)+'" target="_blank" rel="noopener noreferrer">Abrir a fonte ↗</a><button type="button" class="copy" data-fsrc="'+esc(f.id)+'">Ver os '+c.length+' itens que citam</button></div></article>'}
+$('livros-lista').innerHTML='<h3>Livros</h3>'+D.fontes.filter(function(f){return f.tipo==='livro'}).map(bookHTML).join('')+'<h3 style="margin-top:32px">Guias online</h3>'+D.fontes.filter(function(f){return f.tipo==='guia'}).map(bookHTML).join('');
+// tema
+var root=document.documentElement;
+try{var sv=localStorage.getItem('guia-tema');if(sv)root.setAttribute('data-theme',sv)}catch(_){}
+$('tema').addEventListener('click',function(){
+ var cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+ var nx=cur==='dark'?'light':'dark';root.setAttribute('data-theme',nx);try{localStorage.setItem('guia-tema',nx)}catch(_){}});
+render();
+if(location.hash){var el=document.getElementById(location.hash.slice(1));if(el)el.scrollIntoView()}
+})();
+</script>
+</body>
+</html>
