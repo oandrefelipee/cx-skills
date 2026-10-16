@@ -1,6 +1,12 @@
 {
   "titulo": "Assinaturas: pausar e retomar pelo painel",
-  "pr": { "numero": 42, "url": "https://github.com/acme/loja-exemplo/pull/42", "branch": "feat/12-pausar-assinatura", "base": "main", "autor": "agente + revisão humana" },
+  "pr": {
+    "numero": 42,
+    "url": "https://github.com/acme/loja-exemplo/pull/42",
+    "branch": "feat/12-pausar-assinatura",
+    "base": "main",
+    "autor": "agente + revisão humana"
+  },
   "data": "2026-10-15",
   "estado": "pass",
   "resumo": "História 12 completa: a pessoa pausa e retoma a assinatura sem falar com o suporte. Migração expand-contract (só acrescenta coluna).",
@@ -13,24 +19,203 @@
   "antesDepois": [
     {
       "titulo": "Linha da assinatura",
-      "antes": { "ascii": "| Plano Pro  ● Ativa    R$ 49/mês   [Cancelar] |" },
-      "depois": { "ascii": "| Plano Pro  ● Ativa    R$ 49/mês   [Pausar] ⋯ |\n| Plano Pro  ○ Pausada  até 12/11   [Retomar]  |" }
+      "antes": {
+        "ascii": "| Plano Pro  ● Ativa    R$ 49/mês   [Cancelar] |"
+      },
+      "depois": {
+        "ascii": "| Plano Pro  ● Ativa    R$ 49/mês   [Pausar] ⋯ |\n| Plano Pro  ○ Pausada  até 12/11   [Retomar]  |"
+      }
     }
   ],
   "checks": [
-    { "nome": "ci/circleci: gates", "estado": "pass", "provedor": "circleci", "link": "https://circleci.com/gh/acme/loja-exemplo/101" },
-    { "nome": "ci/circleci: e2e-afetado", "estado": "pass", "provedor": "circleci", "link": "https://circleci.com/gh/acme/loja-exemplo/102" },
-    { "nome": "revisão de código", "estado": "pass", "provedor": "github (app)" },
-    { "nome": "capturas visuais", "estado": "skipping", "provedor": "noturno" }
+    {
+      "nome": "ci/circleci: gates",
+      "estado": "pass",
+      "provedor": "circleci",
+      "link": "https://circleci.com/gh/acme/loja-exemplo/101",
+      "duracaoSeg": 95
+    },
+    {
+      "nome": "ci/circleci: e2e-afetado",
+      "estado": "pass",
+      "provedor": "circleci",
+      "link": "https://circleci.com/gh/acme/loja-exemplo/102",
+      "duracaoSeg": 312
+    },
+    {
+      "nome": "revisão de código",
+      "estado": "pass",
+      "provedor": "github (app)"
+    },
+    {
+      "nome": "capturas visuais",
+      "estado": "skipping",
+      "provedor": "noturno"
+    },
+    {
+      "nome": "e2e: pausa.spec › desfazer em 10 s",
+      "estado": "pass",
+      "provedor": "circleci",
+      "duracaoSeg": 41,
+      "flaky": "1 rerun · dono @time-assinaturas · prazo 22/10"
+    }
   ],
   "deploy": [
-    { "ambiente": "staging", "sha": "3f9a2c1e", "health": "saudavel", "quando": "15/10 14:20" },
-    { "ambiente": "production", "sha": "", "health": "pendente", "quando": "aguarda o \"pode\"" }
+    {
+      "ambiente": "staging",
+      "sha": "3f9a2c1e",
+      "health": "saudavel",
+      "quando": "15/10 14:20",
+      "versao": "v1.14.0",
+      "migracao": "0033 aditiva",
+      "p95": "180 ms",
+      "latenciaMs": [
+        210,
+        195,
+        188,
+        202,
+        180,
+        176,
+        184,
+        179,
+        181,
+        175
+      ]
+    },
+    {
+      "ambiente": "production",
+      "sha": "",
+      "health": "pendente",
+      "quando": "aguarda o \"pode\""
+    }
   ],
-  "dora": { "periodo": "set/2026", "frequenciaDeploy": "14/mês", "leadTime": "1,6 dia", "taxaFalha": "7%", "recuperacao": "18 min" },
+  "dora": {
+    "periodo": "set/2026",
+    "frequenciaDeploy": "14/mês",
+    "leadTime": "1,6 dia",
+    "taxaFalha": "7%",
+    "recuperacao": "18 min"
+  },
   "riscos": [
-    { "nivel": "medio", "texto": "Cobrança do dia da pausa pode sair se a rotina rodar antes do clique.", "mitigacao": "A rotina relê paused_at dentro da transação." },
-    { "nivel": "baixo", "texto": "Coluna nova sem uso pela versão anterior.", "mitigacao": "Expand-contract: a versão anterior ignora a coluna; rollback só do app." }
+    {
+      "nivel": "medio",
+      "texto": "Cobrança do dia da pausa pode sair se a rotina rodar antes do clique.",
+      "mitigacao": "A rotina relê paused_at dentro da transação."
+    },
+    {
+      "nivel": "baixo",
+      "texto": "Coluna nova sem uso pela versão anterior.",
+      "mitigacao": "Expand-contract: a versão anterior ignora a coluna; rollback só do app."
+    }
   ],
-  "rollback": "Redeploy da versão anterior no provedor ou revert por PR. A migração fica (só acrescenta); o contract sai num PR posterior."
+  "rollback": "Redeploy da versão anterior no provedor ou revert por PR. A migração fica (só acrescenta); o contract sai num PR posterior.",
+  "estadoTexto": "Em produção",
+  "selos": [
+    {
+      "tom": "aviso",
+      "texto": "1 instável em quarentena"
+    }
+  ],
+  "links": [
+    {
+      "texto": "História 12",
+      "url": "https://example.com/historia-12"
+    },
+    {
+      "texto": "Wireframe aprovado",
+      "url": "https://example.com/w12"
+    }
+  ],
+  "porque": "A pessoa pausa e retoma a assinatura sem falar com o suporte, e a cobrança respeita a pausa.",
+  "atencao": [
+    "Migração expand-contract: só acrescenta paused_at (nula); o contract sai num PR posterior.",
+    "A rotina de cobrança relê paused_at dentro da transação.",
+    "Desfazer da pausa vale 10 s; depois disso, só Retomar."
+  ],
+  "linhaDoTempo": [
+    {
+      "etapa": "PR aberto",
+      "quando": "10:02",
+      "estado": "feito"
+    },
+    {
+      "etapa": "CI verde",
+      "quando": "10:08",
+      "nota": "6 min",
+      "estado": "feito"
+    },
+    {
+      "etapa": "Revisão",
+      "quando": "11:40",
+      "nota": "aprovado",
+      "estado": "feito"
+    },
+    {
+      "etapa": "Merge",
+      "quando": "12:55",
+      "nota": "trem #7",
+      "estado": "feito"
+    },
+    {
+      "etapa": "Staging",
+      "quando": "13:01",
+      "nota": "health ok",
+      "estado": "feito"
+    },
+    {
+      "etapa": "Produção",
+      "nota": "aguarda o \"pode\"",
+      "estado": "agora"
+    }
+  ],
+  "esboco": [
+    {
+      "titulo": "Banco e contrato",
+      "lang": "diff",
+      "codigo": " subscriptions\n   id, plan_id, status\n+  paused_at timestamptz null\n+  index (status) where paused_at is null\n\n POST /subscriptions/:id/pause   → 200 { status: \"paused\", pausedAt }\n+POST /subscriptions/:id/resume  → 200 { status: \"active\" }"
+    },
+    {
+      "titulo": "Cobrança diária",
+      "lang": "diff",
+      "codigo": " para cada assinatura ativa\n+  se paused_at não é nulo (relido na transação): pule\n   cobre o ciclo"
+    },
+    {
+      "titulo": "Componentes",
+      "lang": "diff",
+      "codigo": " <SubscriptionRow>\n-  <CancelButton />\n+  <PauseButton />   useUndo(10 s)\n+  <RowMenu> Cancelar · Histórico"
+    }
+  ],
+  "kpis": [],
+  "arquivos": {
+    "total": 18,
+    "mais": 412,
+    "menos": 96,
+    "lista": [
+      {
+        "caminho": "db/migrations/0033_subscription_pause.sql",
+        "mais": 14,
+        "menos": 0
+      },
+      {
+        "caminho": "api/subscriptions/pause.ts",
+        "mais": 88,
+        "menos": 3
+      },
+      {
+        "caminho": "jobs/billing-daily.ts",
+        "mais": 12,
+        "menos": 4
+      },
+      {
+        "caminho": "web/subscriptions/SubscriptionRow.tsx",
+        "mais": 64,
+        "menos": 22
+      },
+      {
+        "caminho": "e2e/pausa.spec.ts",
+        "mais": 120,
+        "menos": 0
+      }
+    ]
+  }
 }
