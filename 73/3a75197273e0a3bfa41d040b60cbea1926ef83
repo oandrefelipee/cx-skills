@@ -1,0 +1,45 @@
+skills/cx-deploy-pipeline/scripts/antes-e-depois.mjs
+  s_635d6e7dfccdc6::t_8384ad72b5d834 1-222
+skills/cx-deploy-pipeline/workflows/10-antes-e-depois.md
+  s_635d6e7dfccdc6::t_97628aa0a24d4c 1-72
+skills/cx-deploy-pipeline/scripts/antes-e-depois.test.mjs
+  s_635d6e7dfccdc6::t_5064f69951bf0b 1-56
+README.md
+  s_635d6e7dfccdc6::t_205cab70579609 58,68-69,71,74-75
+skills/cx-deploy-pipeline/SKILL.md
+  s_635d6e7dfccdc6::t_6371b68f45a906 3,38
+skills/cx-deploy-pipeline/references/contrato-adaptador.md
+  s_635d6e7dfccdc6::t_efb0445d4cb0ed 50-53
+skills/cx-deploy-pipeline/references/fontes.md
+  s_635d6e7dfccdc6::t_d948a1b44bf854 23
+skills/cx-deploy-pipeline/references/relatorio-pr.md
+  s_635d6e7dfccdc6::t_a87e410523fedc 30
+skills/cx-deploy-pipeline/vendor/before-and-after/LICENSE
+  s_635d6e7dfccdc6::t_527fa5dfa8bf4c 1-27
+skills/cx-deploy-pipeline/vendor/before-and-after/SKILL.md
+  s_635d6e7dfccdc6::t_f070b36c5f675b 1-158
+skills/cx-deploy-pipeline/vendor/before-and-after/scripts/format.mjs
+  s_635d6e7dfccdc6::t_62cc5bbcf7e031 1-215
+skills/cx-deploy-pipeline/workflows/00-preparar-pr.md
+  s_635d6e7dfccdc6::t_4fe151b6d2d656 22
+skills/cx-deploy-pipeline/workflows/04-mesclar-com-seguranca.md
+  s_635d6e7dfccdc6::t_ddf53caa9f3a79 15
+skills/cx-deploy-pipeline/vendor/before-and-after/ORIGEM.md
+  s_635d6e7dfccdc6::t_3e61db8d3e313e 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "733a75197273e0a3bfa41d040b60cbea1926ef83",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
