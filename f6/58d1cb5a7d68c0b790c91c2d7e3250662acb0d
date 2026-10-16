@@ -1,0 +1,19 @@
+skills/cx-deploy-pipeline/scripts/relatorio-pr.mjs
+  s_635d6e7dfccdc6::t_81493ccfb2c2ff 30-31,43,72-74,77,125,130,250,254
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f658d1cb5a7d68c0b790c91c2d7e3250662acb0d",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
