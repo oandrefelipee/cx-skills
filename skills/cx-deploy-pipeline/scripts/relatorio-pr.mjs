@@ -27,6 +27,8 @@ const baseImg = dirname(origem);
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const slug = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+// Só http(s), âncora ou caminho relativo vira href; javascript:, data: e afins viram "#".
+const href = (u) => { const v = String(u ?? "").trim(); return /^(https?:\/\/|#|\.{0,2}\/|[\w-]+(\.[\w-]+)*(\/|$))/i.test(v) && !/^[a-z][a-z0-9+.-]*:/i.test(v.replace(/^https?:\/\//i, "")) ? esc(v) : "#"; };
 const MIME = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".avif": "image/avif" };
 const numero = (n) => new Intl.NumberFormat("pt-BR").format(n);
 function duracao(seg) {
@@ -38,7 +40,7 @@ function duracao(seg) {
 }
 
 function imagem(src, alt) {
-  if (/^(https?:|data:)/.test(src)) return `<img src="${esc(src)}" alt="${esc(alt)}" loading="lazy">`;
+  if (/^(https?:|data:)/.test(src)) return `<img src="${href(src)}" alt="${esc(alt)}" loading="lazy">`;
   const p = resolve(baseImg, src);
   if (!existsSync(p)) return `<p class="vazio">Captura não encontrada: ${esc(src)}</p>`;
   const b64 = readFileSync(p).toString("base64");
@@ -67,11 +69,12 @@ function codigo(bloco) {
   return `<pre class="codigo" data-lang="${esc(bloco.lang || "text")}"><code>${html}</code></pre>`;
 }
 
-function sparkline(valores) {
-  if (!valores?.length) return "";
+function sparkline(entrada) {
+  const valores = (entrada || []).map(Number).filter(Number.isFinite);
+  if (!valores.length) return "";
   const max = Math.max(...valores), min = Math.min(...valores), w = 160, h = 36, n = valores.length;
   const pts = valores.map((v, i) => `${n === 1 ? 0 : ((i / (n - 1)) * w).toFixed(1)},${(h - 2 - ((v - min) / (max - min || 1)) * (h - 6)).toFixed(1)}`).join(" ");
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Latência depois do deploy: ${valores.join(", ")} ms"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(`Latência depois do deploy: ${valores.join(", ")} ms`)}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
 const pr = d.pr || {};
@@ -119,12 +122,12 @@ if (d.esboco?.length) {
 }
 if (checks.length) {
   const maior = Math.max(...checks.map((c) => c.duracaoSeg || 0), 1);
-  const linhas = (lista) => lista.map((c) => `<tr><td>${c.link ? `<a href="${esc(c.link)}">${esc(c.nome)}</a>` : esc(c.nome)}${c.nota ? `<small>${esc(c.nota)}</small>` : ""}</td><td>${selo(c.estado)}</td><td class="sutil">${esc(c.provedor || "")}</td><td>${c.duracaoSeg ? `<div class="barra" title="${duracao(c.duracaoSeg)}"><span style="width:${Math.max(3, Math.round((c.duracaoSeg / maior) * 100))}%"></span></div><small class="num">${duracao(c.duracaoSeg)}</small>` : ""}</td></tr>`).join("");
+  const linhas = (lista) => lista.map((c) => `<tr><td>${c.link ? `<a href="${href(c.link)}">${esc(c.nome)}</a>` : esc(c.nome)}${c.nota ? `<small>${esc(c.nota)}</small>` : ""}</td><td>${selo(c.estado)}</td><td class="sutil">${esc(c.provedor || "")}</td><td>${c.duracaoSeg ? `<div class="barra" title="${duracao(c.duracaoSeg)}"><span style="width:${Math.max(3, Math.round((c.duracaoSeg / maior) * 100))}%"></span></div><small class="num">${duracao(c.duracaoSeg)}</small>` : ""}</td></tr>`).join("");
   const instaveis = checks.filter((c) => c.flaky);
   sec("checks", `Checks <span class="conta">${nOk}/${nConta} ok${nConta < checks.length ? ` · ${checks.length - nConta} pulado(s)` : ""}</span>`, `<div class="rolagem"><table><thead><tr><th>Check</th><th>Estado</th><th>Provedor</th><th>Duração</th></tr></thead><tbody>${linhas(checks)}</tbody></table></div>${instaveis.length ? `<details><summary>${instaveis.length} instável(is) em quarentena</summary><ul class="lista">${instaveis.map((c) => `<li><code>${esc(c.nome)}</code> ${esc(c.flaky === true ? "" : c.flaky)}</li>`).join("")}</ul></details>` : ""}`);
 }
 if (d.deploy?.length) {
-  sec("deploy", "Deploy", `<div class="deploys">${d.deploy.map((x) => `<div class="cartao"><div class="cartao-topo"><b>${x.link ? `<a href="${esc(x.link)}">${esc(x.ambiente)}</a>` : esc(x.ambiente)}</b>${selo(x.health || x.estado || "pendente")}</div>
+  sec("deploy", "Deploy", `<div class="deploys">${d.deploy.map((x) => `<div class="cartao"><div class="cartao-topo"><b>${x.link ? `<a href="${href(x.link)}">${esc(x.ambiente)}</a>` : esc(x.ambiente)}</b>${selo(x.health || x.estado || "pendente")}</div>
     <dl>${x.sha ? `<dt>SHA</dt><dd><code>${esc(String(x.sha).slice(0, 7))}</code></dd>` : ""}${x.versao ? `<dt>Versão</dt><dd>${esc(x.versao)}</dd>` : ""}${x.migracao ? `<dt>Migração</dt><dd>${esc(x.migracao)}</dd>` : ""}${x.p95 ? `<dt>p95</dt><dd>${esc(x.p95)}</dd>` : ""}${x.quando ? `<dt>Quando</dt><dd>${esc(x.quando)}</dd>` : ""}</dl>
     ${sparkline(x.latenciaMs)}</div>`).join("")}</div>`);
 }
@@ -244,11 +247,11 @@ const selosTopo = [d.estado && selo(d.estado, d.estadoTexto), ...(d.selos || [])
 const corpo = `<div class="casca">
 <nav class="indice" aria-label="Seções"><span>Neste relatório</span>${secoes.map((s) => `<a href="#${s.id}">${s.nome.replace(/<[^>]+>.*$/, "").trim()}</a>`).join("")}</nav>
 <main class="principal">
-  <div class="topo">${pr.url ? `<a href="${esc(pr.url)}">PR #${esc(pr.numero)}</a>` : `<span>PR #${esc(pr.numero)}</span>`}${pr.branch ? `<code>${esc(pr.branch)} → ${esc(pr.base || "main")}</code>` : ""}${pr.autor ? `<span>${esc(pr.autor)}</span>` : ""}${d.data ? `<span>${esc(d.data)}</span>` : ""}<span class="esp"></span><button class="btn tema" type="button">Tema</button><button class="btn pdf" type="button">Exportar PDF</button></div>
+  <div class="topo">${pr.url ? `<a href="${href(pr.url)}">PR #${esc(pr.numero)}</a>` : `<span>PR #${esc(pr.numero)}</span>`}${pr.branch ? `<code>${esc(pr.branch)} → ${esc(pr.base || "main")}</code>` : ""}${pr.autor ? `<span>${esc(pr.autor)}</span>` : ""}${d.data ? `<span>${esc(d.data)}</span>` : ""}<span class="esp"></span><button class="btn tema" type="button">Tema</button><button class="btn pdf" type="button">Exportar PDF</button></div>
   <h1>${esc(titulo)}</h1>
   ${d.resumo ? `<p class="resumo">${esc(d.resumo)}</p>` : ""}
   ${selosTopo ? `<div class="selos">${selosTopo}</div>` : ""}
-  ${d.links?.length ? `<div class="links">${d.links.map((l) => `<a href="${esc(l.url)}">${esc(l.texto)}</a>`).join("")}</div>` : ""}
+  ${d.links?.length ? `<div class="links">${d.links.map((l) => `<a href="${href(l.url)}">${esc(l.texto)}</a>`).join("")}</div>` : ""}
   ${kpis.length ? `<div class="kpis">${kpis.map((k) => `<div class="kpi ${esc(k.tom || "")}"><span>${esc(k.rotulo)}</span><strong>${esc(k.valor)}</strong>${k.nota ? `<small>${esc(k.nota)}</small>` : ""}</div>`).join("")}</div>` : ""}
   ${secoes.map((s) => s.html).join("\n")}
   <footer>${d.dora ? `<span>DORA (${esc(d.dora.periodo || "período")}): ${esc(d.dora.frequenciaDeploy ?? "—")} deploys · ${esc(d.dora.leadTime ?? "—")} até produção · ${esc(d.dora.taxaFalha ?? "—")} de falha · ${esc(d.dora.recuperacao ?? "—")} para recuperar</span>` : ""}<span>Gerado por cx-deploy-pipeline · relatorio-pr.mjs</span></footer>
