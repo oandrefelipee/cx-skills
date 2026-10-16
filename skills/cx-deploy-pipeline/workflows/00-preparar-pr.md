@@ -19,7 +19,7 @@ Fase: **antes do merge**. Objetivo: chegar ao PR com a mudança completa e só o
 
 4. Commit em mensagens convencionais; push.
 5. Ainda não é hora de fechar? Continue acumulando na mesma branch (veja os sinais). É hora? Abra ou atualize o PR:
-   - título no padrão do projeto; corpo com **O que mudou**, **Antes → Depois** (captura ou ASCII) e **Riscos**;
+   - título no padrão do projeto; corpo com **O que mudou**, **Antes → Depois** e **Riscos**; as capturas seguem o [10](10-antes-e-depois.md) (ASCII só quando não há tela);
    - PR em rascunho enquanto o CI roda pela primeira vez, se o projeto usar rascunhos.
 6. Siga para [01](01-ler-e-triar-ci.md).
 

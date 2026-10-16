@@ -20,3 +20,4 @@ Resumos com palavras próprias; consulte a fonte para o detalhe atual.
 - `shipping-and-launch` ([addyosmani/agent-skills](https://skills.sh/addyosmani/agent-skills/shipping-and-launch)): limiares de rollback e plano de banco.
 - `land-and-deploy`, `canary` e `setup-deploy` (gstack): portão de prontidão, canário pelo escopo do diff, configuração declarada.
 - `babysit` (poteto): limite de 3 rodadas e nunca desobrigar um check.
+- `before-and-after` ([vercel-labs/before-and-after](https://github.com/vercel-labs/before-and-after), James Clements): fluxo e formatador de antes e depois no PR. **Copiado e adaptado** (não só inspiração): original e licença em [`../vendor/before-and-after/`](../vendor/before-and-after/ORIGEM.md); derivados no [10](../workflows/10-antes-e-depois.md) e em `scripts/antes-e-depois.mjs`.

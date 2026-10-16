@@ -27,5 +27,5 @@ Destino padrão: `relatorios.dir` do adaptador, senão `docs/relatorios/pr/`, co
 ## Regras
 
 - Nada de segredo, dado pessoal real ou log cru: o que vier de log passa por `redigir.mjs`.
-- Capturas: as do PR, nas larguras e temas que o projeto exige; ASCII quando não houver tela.
+- Capturas: as mesmas do corpo do PR, geradas pelo [10](../workflows/10-antes-e-depois.md) (`antes-e-depois.mjs --relatorio`), nas larguras e temas do adaptador; ASCII quando não houver tela.
 - O link do relatório vai no corpo do PR ou num comentário. Commit do HTML no próprio PR.

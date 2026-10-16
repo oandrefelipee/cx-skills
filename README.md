@@ -55,6 +55,7 @@ skills/cx-deploy-pipeline/
   workflows/                  antes do merge: 00 preparar PR · 01 ler e triar CI · 02 corrigir · 03 flaky
                               merge e deploy: 04 mesclar (com relatório) · 05 deploy com o "pode"
                               depois: 06 verificar · 07 rollback · 08 trocar ou acrescentar provedor · 09 disco
+                              10 antes e depois no PR e no relatório (capturas, tela nova, vídeo)
   references/
     sintomas.md · contrato-adaptador.md · adaptador-modelo.md · relatorio-pr.md
     regras/INDEX.md           8 regras, um .md cada
@@ -64,9 +65,13 @@ skills/cx-deploy-pipeline/
                               registro-imagens, com INDEX por categoria, _modelo.md e "Aprendizados"
     seguranca.md · diagramas.md · fontes.md
   scripts/                    ci-status · redigir (+ testes) · preflight-disco · checar-config ·
-                              checar-health · relatorio-pr · checar-links (Node ou Bun, sem dependências)
+                              checar-health · relatorio-pr · antes-e-depois (+ testes) · checar-links
+                              (Node ou Bun, sem dependências)
   assets/                     adaptador-exemplo.json · exemplo-relatorio.json/.html
+  vendor/before-and-after/    original de vercel-labs/before-and-after (James Clements), licença e ORIGEM.md
 ```
+
+O fluxo de antes e depois é copiado e adaptado do [before-and-after](https://github.com/vercel-labs/before-and-after) (James Clements, vercel-labs), com a licença original em `skills/cx-deploy-pipeline/vendor/before-and-after/LICENSE`.
 
 O adaptador do projeto é descoberto nesta ordem: `.cx/pipeline/adaptador.json`, a seção do `AGENTS.md` ou `CLAUDE.md` (até 3 linhas apontando o arquivo) e `docs/deploy/pipeline/`. Modelo em [`references/adaptador-modelo.md`](skills/cx-deploy-pipeline/references/adaptador-modelo.md).
 

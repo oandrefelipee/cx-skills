@@ -47,6 +47,10 @@ Ambiente cujo nome contém "prod" precisa de `needsPode: true`; o `checar-config
 | `recursos.proibidoNoLaptop[]` | comandos que só rodam no CI | sim |
 | `segredos.onde` | onde o humano cadastra os segredos; **nunca** o valor | sim |
 | `relatorios.dir` | pasta dos relatórios HTML (padrão `docs/relatorios/pr`) | não |
+| `antesDepois.caminhosUi[]` | globs que contam como interface ([10](../workflows/10-antes-e-depois.md)) | não |
+| `antesDepois.matriz[]` | larguras e temas capturados (ex.: `1440 claro`, `390 escuro`) | não |
+| `antesDepois.capturar` | comando do projeto que salva as capturas (`<tela>`, `<lado>` = `antes` ou `depois`) | não |
+| `antesDepois.desenhos` | onde ficam os desenhos aprovados (wireframes, protótipos) | não |
 
 ## Exemplo
 

@@ -1,6 +1,6 @@
 ---
 name: cx-deploy-pipeline
-description: Conduz uma mudança de PR até produção com segurança. Lê os checks do PR, tria e corrige CI vermelho, trata testes instáveis (flaky), mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke depois e faz rollback quando preciso. Gera um relatório HTML por PR. Independe de provedor (CircleCI, GitHub Actions ou Buildkite no CI; Dokploy, Railway, Vercel ou Fly no deploy) graças a um adaptador do projeto, com o GitHub como fonte da verdade. Use sempre que o pedido envolver status de CI, "por que o CI falhou", checks do PR, flaky, rerun, merge, trem de merge, merge queue, deploy, staging, produção, health check, smoke, canário, rollback, revert, relatório de PR, quando fechar o PR, trocar ou acrescentar provedor de CI, deploy, DNS, segredos ou observabilidade, falta de disco durante build ou teste, ou antes de rodar uma suíte pesada no laptop. Use mesmo que o provedor não seja citado.
+description: Conduz uma mudança de PR até produção com segurança. Lê os checks do PR, tria e corrige CI vermelho, trata testes instáveis (flaky), mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke depois e faz rollback quando preciso. Gera um relatório HTML por PR. Independe de provedor (CircleCI, GitHub Actions ou Buildkite no CI; Dokploy, Railway, Vercel ou Fly no deploy) graças a um adaptador do projeto, com o GitHub como fonte da verdade. Use sempre que o pedido envolver status de CI, "por que o CI falhou", checks do PR, flaky, rerun, merge, trem de merge, merge queue, deploy, staging, produção, health check, smoke, canário, rollback, revert, relatório de PR, antes e depois, capturas ou vídeo no PR, quando fechar o PR, trocar ou acrescentar provedor de CI, deploy, DNS, segredos ou observabilidade, falta de disco durante build ou teste, ou antes de rodar uma suíte pesada no laptop. Use mesmo que o provedor não seja citado.
 ---
 
 # Pipeline de entrega: CI → merge → deploy → verificação → rollback
@@ -35,6 +35,7 @@ Detalhe e justificativa de cada uma em [`references/regras/INDEX.md`](references
 | | "Como está o CI?", "por que falhou?" | [`workflows/01-ler-e-triar-ci.md`](workflows/01-ler-e-triar-ci.md) |
 | | Corrigir CI vermelho | [`workflows/02-corrigir-ci-vermelho.md`](workflows/02-corrigir-ci-vermelho.md) |
 | | Teste que falha às vezes | [`workflows/03-tratar-flaky.md`](workflows/03-tratar-flaky.md) |
+| | Capturas de antes e depois no PR e no relatório (tela, tela nova, vídeo) | [`workflows/10-antes-e-depois.md`](workflows/10-antes-e-depois.md) |
 | **Merge e deploy** | Mesclar (PR único, trem ou merge queue) e gerar o relatório | [`workflows/04-mesclar-com-seguranca.md`](workflows/04-mesclar-com-seguranca.md) |
 | | Subir para staging ou produção | [`workflows/05-deploy-com-pode.md`](workflows/05-deploy-com-pode.md) |
 | **Depois** | Conferir que o deploy está de pé | [`workflows/06-verificar-pos-deploy.md`](workflows/06-verificar-pos-deploy.md) |

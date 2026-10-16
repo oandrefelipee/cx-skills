@@ -12,7 +12,7 @@ Fase: **merge e deploy**. Objetivo: levar à branch principal só o que está pr
 
 ## Passos
 
-1. Gere o relatório ([formato](../references/relatorio-pr.md)):
+1. Gere o relatório ([formato](../references/relatorio-pr.md)). Se o PR toca interface, o `antesDepois[]` sai do `antes-e-depois.mjs --relatorio` com os mesmos pares do corpo ([10](10-antes-e-depois.md)):
 
    ```text
    node scripts/relatorio-pr.mjs relatorio.json
