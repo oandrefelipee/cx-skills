@@ -33,9 +33,9 @@ pipeline: passos pesados num concurrency_group ("<org>/vps-pesado") → um por v
 | Onde | Mecanismo | Frequência |
 |---|---|---|
 | Cache de build do Docker do CI | `daemon.json` → `builder.gc` (`defaultKeepStorage` + `unused-for`) e `builder prune --keep-storage` | contínuo + diário |
-| Imagens/contêineres/redes/volumes do CI | `image prune -a --filter until=48h`, `container/network prune`, volumes do prefixo do CI | diário + fim do job |
+| Imagens/contêineres/redes/volumes do CI (só volumes com o prefixo do CI, descartáveis por construção) | `image prune -a --filter until=48h`, `container/network prune`, volumes do prefixo do CI | diário + fim do job |
 | Projetos compose do CI | nome com prefixo (`<proj>-ci-<build>`), `down -v` no `trap` e no hook `pre-exit` | cada job |
-| Checkout | hook `pre-exit` apaga o workspace; órfãos > 2 dias no timer | job + diário |
+| Checkout | hook `pre-exit` apaga o workspace; órfãos > 2 dias no timer, **na profundidade de um checkout** (Buildkite padrão: `builds/<agente>/<org>/<pipeline>` → 3) e **como o dono** | job + diário |
 | Runtime (Docker root) | **só** `builder prune --filter until=168h --keep-storage 8GB` e `image prune` (órfãs) | diário |
 | `/tmp` dos usuários de CI | > 30 min no job, > 1 dia no timer | job + diário |
 | Logs de contêiner do CI | driver `local`, `max-size` 10m × 2 | contínuo |

@@ -67,7 +67,8 @@ skills/cx-deploy-pipeline/
     seguranca.md · diagramas.md · fontes.md
   scripts/                    ci-status · redigir (+ testes) · preflight-disco · checar-config ·
                               checar-health · relatorio-pr · antes-e-depois (+ testes) · checar-links
-                              (Node ou Bun, sem dependências) · runner-add-repo.sh
+                              (Node ou Bun, sem dependências) · ci-status.test
+                              runner-add-repo.sh (bash; precisa de ssh e gh, bk opcional)
   assets/                     adaptador-exemplo.json · exemplo-relatorio.json/.html · higiene-host.sh (timer de limpeza)
   vendor/before-and-after/    original de vercel-labs/before-and-after (James Clements), licença e ORIGEM.md
 ```

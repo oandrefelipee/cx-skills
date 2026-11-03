@@ -16,7 +16,7 @@ Conta, app do GitHub, pipeline, segredos (*Cluster → Secrets*) e token do agen
 
 ## Economia de CI
 
-O plano grátis tem limite de usuários e de retenção, não de minutos (os minutos são da sua máquina). O custo real é o tempo do agente e a carga na VPS:
+Agentes próprios (self-hosted) não gastam minutos do plano: o custo é a sua máquina. Os agentes **hospedados** têm uma franquia mensal no plano grátis (confira em *Settings → Billing*); acabou, o job é cancelado. O custo real é o tempo do agente e a carga na VPS:
 
 | Ajuste | Onde | Efeito |
 |---|---|---|
@@ -26,7 +26,7 @@ O plano grátis tem limite de usuários e de retenção, não de minutos (os min
 | PRs de forks: **não** | Pipeline → GitHub | Segurança e custo |
 | `branches:` nos passos | `pipeline.yml` | E2E completo e smoke só na principal e no trem; PR roda gates e E2E afetado |
 | `[skip ci]` na mensagem | commit | Para commits só de docs ou tracking |
-| Agentes hospedados (ou um job por vez no self-hosted, `spawn=1`) | fila | Não disputa CPU e memória com o staging da VPS |
+| Agentes hospedados, ou no self-hosted `spawn=1` **mais** teto de CPU e memória no serviço ou slice (`CPUQuota`, `MemoryMax`) | fila + systemd | Reduz a disputa com o staging da VPS: `spawn=1` só evita jobs paralelos, o teto limita o que um job sozinho consome |
 | **PR por história** | fluxo | Menos rodadas: ver [quando fechar o PR](../../padroes/quando-fechar-o-pr.md) |
 
 ## Agente self-hosted multiprojeto
@@ -39,7 +39,7 @@ Padrão completo, com entrevista ao dono, em [runner-self-hosted-multiprojeto](.
 - **Limpeza**: `pre-exit` apaga o workspace; timer semanal endurecido só apaga caches e `builds/*` órfãos (sem git sobre workspace, sem tocar com job rodando); journal do host só com aprovação.
 - **Segredos por pipeline**: `/etc/buildkite-agent/secrets/<slug>.env` via `bk-set-secret <slug> <KEY>` com o valor no stdin (`bw get password ... | ssh host 'bk-set-secret ...'`).
 - **Exit 128 no checkout** em ~30 s = clone sem credencial (self-hosted não tem o app do GitHub dos hospedados).
-- Não reinicie o agente com job em andamento (`journalctl -u buildkite-agent`).
+- Não reinicie o agente com job em andamento: confira antes (`pgrep -f 'buildkite-agent bootstrap'`), depois `systemctl restart buildkite-agent`.
 
 ## Armadilhas
 
@@ -58,5 +58,5 @@ Padrão completo, com entrevista ao dono, em [runner-self-hosted-multiprojeto](.
 |---|---|
 | 2026-10-15 | CircleCI bloqueou a conta por login automatizado; migração para Buildkite |
 | 2026-10-16 | Agentes Linux hospedados (`linux-medium`) no lugar da VPS: gates com smoke ~3 min, E2E afetado ~2,5 min |
-| 2026-11-02 | Fila hospedada sem cota **cancela o job ~0,5 s depois de `runnable`, sem agente** (`started_at` nulo). Saída: agente próprio com Docker rootless (fila `privatelab-docker`) e `concurrency_group` comum aos passos pesados do host. `BUILDKITE_BUILD_CHECKOUT_PATH` no hook `environment` define o checkout; `buildkite-agent secret get` lê segredo do cluster em qualquer agente; filas do cluster criadas por `bk api --method POST /clusters/<id>/queues` |
 | 2026-10-19 | Agente self-hosted virou multiprojeto: deploy key somente leitura por repo, hook `environment` por pipeline, token via Bitwarden por pipe, limpeza semanal; o 128 no checkout era clone sem credencial |
+| 2026-11-02 | Fila hospedada sem cota **cancela o job ~0,5 s depois de `runnable`, sem agente** (`started_at` nulo). Saída: agente próprio com Docker rootless (fila `privatelab-docker`) e `concurrency_group` comum aos passos pesados do host. `BUILDKITE_BUILD_CHECKOUT_PATH` no hook `environment` define o checkout; `buildkite-agent secret get` lê segredo do cluster em qualquer agente; filas do cluster criadas por `bk api --method POST /clusters/<id>/queues` |

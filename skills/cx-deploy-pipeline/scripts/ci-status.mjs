@@ -15,6 +15,7 @@
 
 import { spawnSync } from "node:child_process";
 import { argumentos, lerAdaptador } from "./_adaptador.mjs";
+import { decidir } from "./_veredito.mjs";
 
 const AJUDA = `Uso: node ci-status.mjs [<pr>|<url>|<branch>] [--repo dono/repo] [--required] [--json] [--adaptador caminho]
 Saída: 0 verde · 1 falha ou exigido ausente · 8 pendente · 2 erro.`;
@@ -52,30 +53,14 @@ function provedor(link = "") {
   return host || "-";
 }
 
-const linhas = checks.map((c) => ({ check: c.name, estado: c.bucket || c.state, provedor: provedor(c.link), link: c.link || "", descricao: c.description || "" }));
+const linhasBrutas = checks.map((c) => ({ check: c.name, estado: c.bucket || c.state, provedor: provedor(c.link), link: c.link || "", descricao: c.description || "" }));
 
-let exigidosAusentes = [];
 let adaptador = null;
 try { adaptador = lerAdaptador(opts.adaptador); } catch (e) { console.error(e.message); }
 const exigidos = adaptador?.dados?.ci?.requiredChecks ?? [];
-const ehExigido = (nome) => exigidos.some((n) => n === nome || n.replace(/^[^:]+:\s*/, "") === nome);
-if (exigidos.length) {
-  const nomes = new Set(checks.map((c) => c.name));
-  exigidosAusentes = exigidos.filter((n) => !nomes.has(n) && !nomes.has(n.replace(/^[^:]+:\s*/, "")));
-  for (const l of linhas) l.informativo = !ehExigido(l.check);
-}
-
 // Com checks exigidos no adaptador, só eles decidem; sem adaptador, todos decidem (comportamento antigo).
-const decidem = linhas.filter((l) => !l.informativo);
-const conta = (b) => decidem.filter((l) => l.estado === b).length;
-const informativosVermelhos = linhas.filter((l) => l.informativo && (l.estado === "fail" || l.estado === "cancel"));
-const falhas = conta("fail") + conta("cancel");
-const pendentes = conta("pending");
-let veredito, codigo;
-if (falhas || exigidosAusentes.length) { veredito = "VERMELHO"; codigo = 1; }
-else if (pendentes) { veredito = "PENDENTE"; codigo = 8; }
-else if (!decidem.length) { veredito = "SEM CHECKS"; codigo = 8; }
-else { veredito = "VERDE"; codigo = 0; }
+const d = decidir(linhasBrutas, exigidos);
+const { linhas, exigidosAusentes, informativosVermelhos, veredito, codigo, conta, falhas, pendentes } = d;
 
 if (opts.json) {
   console.log(JSON.stringify({ pr: info.number, url: info.url, sha: info.headRefOid, merge: info.mergeStateStatus, revisao: info.reviewDecision, rascunho: info.isDraft, veredito, checks: linhas, exigidosAusentes, informativosVermelhos: informativosVermelhos.map((l) => l.check) }, null, 2));

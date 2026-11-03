@@ -75,8 +75,9 @@ Node 18+ ou Bun, sem dependências; `--ajuda` mostra o uso. O `ci:status` do pro
 | `scripts/checar-config.mjs` | Valida o adaptador: campos, scripts citados, segredo colado, checks que o GitHub não conhece | `node scripts/checar-config.mjs --gh` |
 | `scripts/checar-health.mjs` | Health pós-deploy por URL ou ambiente, com linha de base e SHA esperado | `node scripts/checar-health.mjs --ambiente staging` |
 | `scripts/relatorio-pr.mjs` | Relatório HTML autocontido do PR e o `index.html` da pasta | `node scripts/relatorio-pr.mjs relatorio.json` |
-| `scripts/runner-add-repo.sh` | Liga um repo a um agente self-hosted (deploy key somente leitura via ssh + gh + bk); `DRY_RUN=1` mostra | `scripts/runner-add-repo.sh dono/repo hostinger4 slug` |
+| `scripts/runner-add-repo.sh` | Bash (não Node; sem `--ajuda`): liga um repo a um agente self-hosted por deploy key somente leitura; precisa de `ssh` e `gh`, `bk` opcional; `DRY_RUN=1` mostra | `scripts/runner-add-repo.sh dono/repo <host-ssh> [pipeline-slug]` |
 | `scripts/checar-links.mjs` | Links relativos quebrados nos .md da skill | `node scripts/checar-links.mjs` |
+| `scripts/ci-status.test.mjs` | Casos do veredito: sem adaptador, exigido falhando, informativo falhando, exigido ausente, nome curto por provedor | `node scripts/ci-status.test.mjs` |
 | `scripts/redigir.test.mjs` | Casos que o `redigir` precisa mascarar (e os que não pode mudar), inclusive via symlink | `node scripts/redigir.test.mjs` |
 
 ## CLI e MCP do provedor
