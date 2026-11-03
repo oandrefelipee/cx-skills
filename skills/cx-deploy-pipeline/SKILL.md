@@ -1,6 +1,6 @@
 ---
 name: cx-deploy-pipeline
-description: Conduz uma mudança de PR até produção com segurança. Lê os checks do PR, tria e corrige CI vermelho, trata testes instáveis (flaky), mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke depois e faz rollback quando preciso. Gera um relatório HTML por PR. Independe de provedor (CircleCI, GitHub Actions ou Buildkite no CI; Dokploy, Railway, Vercel ou Fly no deploy) graças a um adaptador do projeto, com o GitHub como fonte da verdade. Use sempre que o pedido envolver status de CI, "por que o CI falhou", checks do PR, flaky, rerun, merge, trem de merge, merge queue, deploy, staging, produção, health check, smoke, canário, rollback, revert, relatório de PR, antes e depois, capturas ou vídeo no PR, quando fechar o PR, trocar ou acrescentar provedor de CI, deploy, DNS, segredos ou observabilidade, falta de disco durante build ou teste, ou antes de rodar uma suíte pesada no laptop. Use mesmo que o provedor não seja citado.
+description: Conduz uma mudança de PR até produção com segurança. Lê os checks do PR, tria e corrige CI vermelho, trata testes instáveis (flaky), mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke depois e faz rollback quando preciso. Gera um relatório HTML por PR. Independe de provedor (CircleCI, GitHub Actions ou Buildkite no CI; Dokploy, Railway, Vercel ou Fly no deploy) graças a um adaptador do projeto, com o GitHub como fonte da verdade. Use sempre que o pedido envolver status de CI, "por que o CI falhou", checks do PR, flaky, rerun, merge, trem de merge, merge queue, deploy, staging, produção, health check, smoke, canário, rollback, revert, relatório de PR, antes e depois, capturas ou vídeo no PR, quando fechar o PR, trocar ou acrescentar provedor de CI, deploy, DNS, segredos ou observabilidade, falta de disco durante build ou teste, VPS ou host acumulando cache, imagens e temporários, runner self-hosted (multiprojeto, Docker rootless no CI), ou antes de rodar uma suíte pesada no laptop. Use mesmo que o provedor não seja citado.
 ---
 
 # Pipeline de entrega: CI → merge → deploy → verificação → rollback
@@ -17,6 +17,7 @@ O agente fala só em verbos (status, logs, rerun, deploy, health, rollback). O *
 6. **Migração em expand-contract:** o rollback volta só o app; o banco nunca desce sem o "pode".
 7. **PR grande, por história:** acumula o trabalho da mesma história ou onda e fecha na hora certa ([quando fechar o PR](references/padroes/quando-fechar-o-pr.md)).
 8. **Abaixo do piso de disco, para:** commit e push do WIP antes de qualquer outra coisa.
+9. **O host não acumula:** todo build, deploy e job tem teto ou limpeza automática por script versionado; o CI com Docker roda rootless, nunca no Docker do runtime ([higiene de host](references/padroes/higiene-de-host.md)).
 
 Detalhe e justificativa de cada uma em [`references/regras/INDEX.md`](references/regras/INDEX.md).
 
@@ -42,6 +43,7 @@ Detalhe e justificativa de cada uma em [`references/regras/INDEX.md`](references
 | | Voltar a versão | [`workflows/07-rollback.md`](workflows/07-rollback.md) |
 | | Trocar ou acrescentar provedor | [`workflows/08-trocar-ou-acrescentar-provedor.md`](workflows/08-trocar-ou-acrescentar-provedor.md) |
 | | Falta disco, memória ou CPU | [`workflows/09-disco-e-recursos.md`](workflows/09-disco-e-recursos.md) |
+| | Ligar host novo, padronizar limpeza, CI com Docker sem root | [`references/padroes/higiene-de-host.md`](references/padroes/higiene-de-host.md) |
 | Consulta | Contrato do adaptador | [`references/contrato-adaptador.md`](references/contrato-adaptador.md) |
 | | Padrões (camadas, trem, quarentena, health, DORA…) | [`references/padroes/INDEX.md`](references/padroes/INDEX.md) |
 | | Um provedor (CLI, MCP, armadilhas, aprendizados) | [`references/provedores/INDEX.md`](references/provedores/INDEX.md) |
@@ -67,13 +69,15 @@ Node 18+ ou Bun, sem dependências; `--ajuda` mostra o uso. O `ci:status` do pro
 
 | Script | Para quê | Exemplo |
 |---|---|---|
-| `scripts/ci-status.mjs` | Checks do PR pelo `gh`, com provedor, link e checks exigidos ausentes; saída 0 verde, 1 falha, 8 pendente | `node scripts/ci-status.mjs 42` |
+| `scripts/ci-status.mjs` | Checks do PR pelo `gh`, com provedor, link e checks exigidos ausentes; com `ci.requiredChecks` no adaptador, só os exigidos decidem e os demais (CI antigo, bots) ficam informativos; saída 0 verde, 1 falha, 8 pendente | `node scripts/ci-status.mjs 42` |
 | `scripts/redigir.mjs` | Mascara segredos; **obrigatório** em todo log que sai do terminal | `<cmd> 2>&1 \| node scripts/redigir.mjs` |
 | `scripts/preflight-disco.mjs` | Espaço livre contra o piso; abaixo dele, o protocolo de parada | `node scripts/preflight-disco.mjs` |
 | `scripts/checar-config.mjs` | Valida o adaptador: campos, scripts citados, segredo colado, checks que o GitHub não conhece | `node scripts/checar-config.mjs --gh` |
 | `scripts/checar-health.mjs` | Health pós-deploy por URL ou ambiente, com linha de base e SHA esperado | `node scripts/checar-health.mjs --ambiente staging` |
 | `scripts/relatorio-pr.mjs` | Relatório HTML autocontido do PR e o `index.html` da pasta | `node scripts/relatorio-pr.mjs relatorio.json` |
+| `scripts/runner-add-repo.sh` | Bash (não Node; sem `--ajuda`): liga um repo a um agente self-hosted por deploy key somente leitura; precisa de `ssh` e `gh`, `bk` opcional; `DRY_RUN=1` mostra | `scripts/runner-add-repo.sh dono/repo <host-ssh> [pipeline-slug]` |
 | `scripts/checar-links.mjs` | Links relativos quebrados nos .md da skill | `node scripts/checar-links.mjs` |
+| `scripts/ci-status.test.mjs` | Casos do veredito: sem adaptador, exigido falhando, informativo falhando, exigido ausente, nome curto por provedor | `node scripts/ci-status.test.mjs` |
 | `scripts/redigir.test.mjs` | Casos que o `redigir` precisa mascarar (e os que não pode mudar), inclusive via symlink | `node scripts/redigir.test.mjs` |
 
 ## CLI e MCP do provedor

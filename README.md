@@ -4,7 +4,7 @@ Skills de agente para Claude Code, Codex, Cursor e outros agentes compatíveis c
 
 | Skill | O que faz |
 |---|---|
-| [`cx-deploy-pipeline`](skills/cx-deploy-pipeline/SKILL.md) | Leva uma mudança de PR até produção com segurança: lê e tria o CI, trata flaky, mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke e faz rollback. Independe de provedor (adaptador do projeto), com o GitHub como fonte da verdade. Relatório HTML por PR, catálogo de provedores com aprendizados e scripts sem dependência. |
+| [`cx-deploy-pipeline`](skills/cx-deploy-pipeline/SKILL.md) | Leva uma mudança de PR até produção com segurança: lê e tria o CI, trata flaky, mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke e faz rollback. Mantém o host limpo (higiene com teto, CI com Docker rootless, runner multiprojeto). Independe de provedor (adaptador do projeto), com o GitHub como fonte da verdade. Relatório HTML por PR, catálogo de provedores com aprendizados e scripts sem dependência. |
 | [`cx-actionable-ui`](skills/cx-actionable-ui/SKILL.md) | Torna telas de produto orientadas a ação: menos texto, uma ação primária, estado em selo, ajuda em ⓘ. Planeja por blocos e wireframe ASCII antes de escrever, com orçamento de palavras e regras anti-slop. Princípios, 14 leis de UX, 30 técnicas, matriz de tom, bibliografia, guia visual e scripts. |
 
 ## Instalar
@@ -51,23 +51,25 @@ Mesmo padrão progressivo: `SKILL.md` com as regras de ouro e os workflows em 3 
 
 ```
 skills/cx-deploy-pipeline/
-  SKILL.md                    8 regras de ouro, "Como trabalhar" por fase, descoberta do adaptador
+  SKILL.md                    9 regras de ouro, "Como trabalhar" por fase, descoberta do adaptador
   workflows/                  antes do merge: 00 preparar PR · 01 ler e triar CI · 02 corrigir · 03 flaky
                               merge e deploy: 04 mesclar (com relatório) · 05 deploy com o "pode"
                               depois: 06 verificar · 07 rollback · 08 trocar ou acrescentar provedor · 09 disco
                               10 antes e depois no PR e no relatório (capturas, tela nova, vídeo)
   references/
     sintomas.md · contrato-adaptador.md · adaptador-modelo.md · relatorio-pr.md
-    regras/INDEX.md           8 regras, um .md cada
+    regras/INDEX.md           9 regras, um .md cada (a 9ª: o host não acumula)
     padroes/INDEX.md          camadas L0–L3, quando fechar o PR, trem ou merge queue, quarentena,
-                              health check, smoke e canário, expand-contract, DORA leve
+                              health check, smoke e canário, expand-contract, DORA leve,
+                              runner self-hosted multiprojeto, higiene de host (Docker rootless no CI)
     provedores/               ci · hospedagem · dns-cdn · segredos · jobs-filas · observabilidade ·
                               registro-imagens, com INDEX por categoria, _modelo.md e "Aprendizados"
     seguranca.md · diagramas.md · fontes.md
   scripts/                    ci-status · redigir (+ testes) · preflight-disco · checar-config ·
                               checar-health · relatorio-pr · antes-e-depois (+ testes) · checar-links
-                              (Node ou Bun, sem dependências)
-  assets/                     adaptador-exemplo.json · exemplo-relatorio.json/.html
+                              (Node ou Bun, sem dependências) · ci-status.test
+                              runner-add-repo.sh (bash; precisa de ssh e gh, bk opcional)
+  assets/                     adaptador-exemplo.json · exemplo-relatorio.json/.html · higiene-host.sh (timer de limpeza)
   vendor/before-and-after/    original de vercel-labs/before-and-after (James Clements), licença e ORIGEM.md
 ```
 
