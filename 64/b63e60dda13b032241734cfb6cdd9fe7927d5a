@@ -1,0 +1,23 @@
+skills/cx-deploy-pipeline/references/adaptador-modelo.md
+  s_635d6e7dfccdc6::t_a075683aa382c4 40
+skills/cx-deploy-pipeline/assets/higiene-host.sh
+  s_635d6e7dfccdc6::t_a075683aa382c4 12,18,23-24,40-42,64-68
+skills/cx-deploy-pipeline/scripts/runner-add-repo.sh
+  s_635d6e7dfccdc6::t_a075683aa382c4 15-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "64b63e60dda13b032241734cfb6cdd9fe7927d5a",
+  "prompts": {},
+  "sessions": {
+    "s_635d6e7dfccdc6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de5b959f-1847-4763-88be-dde8baad41e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "oandrefelipee <contatoandrefelipeee@gmail.com>"
+    }
+  }
+}
