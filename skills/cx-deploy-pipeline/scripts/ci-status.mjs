@@ -6,7 +6,8 @@
 //   node ci-status.mjs [<pr>|<url>|<branch>] [--repo dono/repo] [--required] [--json] [--adaptador caminho]
 //
 // Sem PR, usa o PR da branch atual. Com adaptador (descoberto ou passado), confere também se cada
-// check exigido (`ci.requiredChecks`) apareceu no PR.
+// check exigido (`ci.requiredChecks`) apareceu no PR, e o veredito passa a olhar só os exigidos: os
+// demais (CI antigo, bots de revisão) aparecem como informativos e não bloqueiam o merge.
 //
 // Saída: tabela check × estado × provedor × link e uma linha de veredito.
 // Códigos de saída (iguais aos do `gh pr checks`): 0 tudo verde, 1 falha ou check exigido ausente,
@@ -57,22 +58,27 @@ let exigidosAusentes = [];
 let adaptador = null;
 try { adaptador = lerAdaptador(opts.adaptador); } catch (e) { console.error(e.message); }
 const exigidos = adaptador?.dados?.ci?.requiredChecks ?? [];
+const ehExigido = (nome) => exigidos.some((n) => n === nome || n.replace(/^[^:]+:\s*/, "") === nome);
 if (exigidos.length) {
   const nomes = new Set(checks.map((c) => c.name));
   exigidosAusentes = exigidos.filter((n) => !nomes.has(n) && !nomes.has(n.replace(/^[^:]+:\s*/, "")));
+  for (const l of linhas) l.informativo = !ehExigido(l.check);
 }
 
-const conta = (b) => linhas.filter((l) => l.estado === b).length;
+// Com checks exigidos no adaptador, só eles decidem; sem adaptador, todos decidem (comportamento antigo).
+const decidem = linhas.filter((l) => !l.informativo);
+const conta = (b) => decidem.filter((l) => l.estado === b).length;
+const informativosVermelhos = linhas.filter((l) => l.informativo && (l.estado === "fail" || l.estado === "cancel"));
 const falhas = conta("fail") + conta("cancel");
 const pendentes = conta("pending");
 let veredito, codigo;
 if (falhas || exigidosAusentes.length) { veredito = "VERMELHO"; codigo = 1; }
 else if (pendentes) { veredito = "PENDENTE"; codigo = 8; }
-else if (!linhas.length) { veredito = "SEM CHECKS"; codigo = 8; }
+else if (!decidem.length) { veredito = "SEM CHECKS"; codigo = 8; }
 else { veredito = "VERDE"; codigo = 0; }
 
 if (opts.json) {
-  console.log(JSON.stringify({ pr: info.number, url: info.url, sha: info.headRefOid, merge: info.mergeStateStatus, revisao: info.reviewDecision, rascunho: info.isDraft, veredito, checks: linhas, exigidosAusentes }, null, 2));
+  console.log(JSON.stringify({ pr: info.number, url: info.url, sha: info.headRefOid, merge: info.mergeStateStatus, revisao: info.reviewDecision, rascunho: info.isDraft, veredito, checks: linhas, exigidosAusentes, informativosVermelhos: informativosVermelhos.map((l) => l.check) }, null, 2));
   process.exit(codigo);
 }
 
@@ -83,11 +89,12 @@ console.log(`SHA ${info.headRefOid.slice(0, 7)} · branch ${info.headRefName} ·
 console.log("");
 console.log(`${"check".padEnd(larg)}  estado  provedor        link`);
 for (const l of linhas.sort((a, b) => (a.estado === "fail" ? -1 : 0) - (b.estado === "fail" ? -1 : 0))) {
-  console.log(`${l.check.padEnd(larg)}  ${(SIMBOLO[l.estado] || l.estado).padEnd(6)}  ${l.provedor.padEnd(14)}  ${l.link}`);
+  console.log(`${l.check.padEnd(larg)}  ${(SIMBOLO[l.estado] || l.estado).padEnd(6)}  ${l.provedor.padEnd(14)}  ${l.link}${l.informativo ? "  (informativo)" : ""}`);
 }
 for (const n of exigidosAusentes) console.log(`${n.padEnd(larg)}  AUSENTE (exigido no adaptador, não reportado)`);
 console.log("");
-console.log(`${veredito}: ${conta("pass")} ok, ${falhas} falha, ${pendentes} pendente, ${conta("skipping")} pulado${exigidosAusentes.length ? `, ${exigidosAusentes.length} exigido ausente` : ""}.`);
+console.log(`${veredito}: ${conta("pass")} ok, ${falhas} falha, ${pendentes} pendente, ${conta("skipping")} pulado${exigidosAusentes.length ? `, ${exigidosAusentes.length} exigido ausente` : ""}${exigidos.length ? ` (só os ${exigidos.length} exigidos decidem)` : ""}.`);
+if (informativosVermelhos.length) console.log(`Informativo, não bloqueia: ${informativosVermelhos.map((l) => l.check).join(", ")} (fora de ci.requiredChecks).`);
 if (codigo === 1) console.log("Próximo passo: logs do primeiro check vermelho (ci.logs do adaptador), sempre por `redigir.mjs`.");
 if (codigo === 8) console.log("Próximo passo: esperar (gh pr checks --watch) ou voltar mais tarde; não mesclar.");
 process.exit(codigo);

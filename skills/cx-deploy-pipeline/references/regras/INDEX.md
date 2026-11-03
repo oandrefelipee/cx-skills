@@ -18,3 +18,5 @@ Leia a lista inteira; abra o arquivo só quando precisar do porquê ou do caso d
   Use em: [00](../../workflows/00-preparar-pr.md), [04](../../workflows/04-mesclar-com-seguranca.md).
 - **[Piso de disco](piso-de-disco.md):** abaixo dele, parar, commit e push.
   Use em: [09](../../workflows/09-disco-e-recursos.md).
+- **[O host não acumula](host-nao-acumula.md):** todo build, deploy e job tem teto ou limpeza automática, por script versionado.
+  Use em: [09](../../workflows/09-disco-e-recursos.md), ligar host novo, revisão de infra.
