@@ -9,18 +9,19 @@
 #
 # O que limpa:
 #   CI (Docker rootless de CI_DOCKER_USER): contêineres parados, imagens sem uso há mais de 48 h, redes órfãs,
-#     volumes CI_PREFIX* e o cache de build acima de CI_BUILDKIT_KEEP (o dockerd também tem GC; isto é a rede de segurança).
+#     volumes que começam literalmente com CI_PREFIX (se definido) e o cache de build acima de CI_BUILDKIT_KEEP (o dockerd também tem GC; isto é a rede de segurança).
 #   Docker do runtime (root): SÓ cache de build com mais de ROOT_BUILD_UNTIL acima de ROOT_BUILD_KEEP e imagens órfãs.
 #     NUNCA `image prune -a`, `volume prune` nem `system prune`: pode haver outros projetos e dados nesse Docker.
 #   Checkouts órfãos dos agentes (mais de BUILD_DAYS dias) e /tmp dos usuários de CI (mais de 1 dia).
 #
 # Segurança: as árvores dos agentes são controláveis por código de PR (um link simbólico plantado ali). Por isso todo
-# `find ... rm` sobre elas roda COMO O DONO (runuser), nunca como root, e usuário root ou de sistema é recusado.
+# `find ... rm` sobre elas roda COMO O DONO (runuser), nunca como root, e root é recusado.
 # Pula tudo se houver job do CI rodando. Saída: uma linha no journal ("livre X MB -> Y MB").
 set -u
 
 CI_DOCKER_USER="${CI_DOCKER_USER:-ci-docker}"
-CI_PREFIX="${CI_PREFIX:-ci-}"
+# Prefixo LITERAL dos volumes do compose do CI (o nome do projeto compose, ex.: "<proj>-ci-"). Vazio = não apaga volume.
+CI_PREFIX="${CI_PREFIX:-}"
 CI_BUILDKIT_KEEP="${CI_BUILDKIT_KEEP:-6GB}"
 ROOT_BUILD_UNTIL="${ROOT_BUILD_UNTIL:-168h}"
 ROOT_BUILD_KEEP="${ROOT_BUILD_KEEP:-8GB}"
@@ -36,8 +37,9 @@ if pgrep -f 'buildkite-agent bootstrap' >/dev/null 2>&1; then
   echo "higiene: job do CI em andamento, pulando"; exit 0
 fi
 
-# Usuário válido para limpeza: existe, não é root e tem uid de usuário comum (>= 1000).
-user_ok() { local u="$1" uid; uid="$(id -u "$u" 2>/dev/null)" || return 1; [ "$uid" -ge 1000 ]; }
+# Usuário válido para limpeza: existe e não é root. Agentes costumam ser contas de sistema (uid < 1000), então o
+# que protege é rodar como ele e exigir que ele seja dono da base (clean_tree), não o número do uid.
+user_ok() { local u="$1" uid; uid="$(id -u "$u" 2>/dev/null)" || return 1; [ "$uid" -ne 0 ]; }
 
 # Apaga, como o dono, entradas com mais de BUILD_DAYS dias na profundidade de um checkout. A base precisa ser
 # diretório real (não link) e pertencer ao usuário.
@@ -59,7 +61,11 @@ if user_ok "$CI_DOCKER_USER"; then
     ci container prune -f >/dev/null 2>&1
     ci image prune -af --filter "until=48h" >/dev/null 2>&1
     ci network prune -f >/dev/null 2>&1
-    for v in $(ci volume ls -q 2>/dev/null | grep -E "^${CI_PREFIX}"); do ci volume rm "$v" >/dev/null 2>&1; done
+    if [ -n "$CI_PREFIX" ]; then
+      ci volume ls -q 2>/dev/null | while IFS= read -r v; do
+        [[ "$v" == "$CI_PREFIX"* ]] && ci volume rm "$v" >/dev/null 2>&1
+      done
+    fi
     ci builder prune -f --keep-storage "$CI_BUILDKIT_KEEP" >/dev/null 2>&1
   fi
 fi

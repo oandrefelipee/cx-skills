@@ -37,7 +37,7 @@ Merge só com os checks exigidos verdes; deploy em produção e restauração de
    }
    ```
 
-   Se a skill não estiver num caminho estável no projeto, copie `ci-status.mjs` e `_adaptador.mjs` para `scripts/` do projeto.
+   Se a skill não estiver num caminho estável no projeto, copie `ci-status.mjs`, `_adaptador.mjs` e `_veredito.mjs` para `scripts/` do projeto.
 4. `node <skill>/scripts/checar-config.mjs --gh` até sair sem erro.
 5. Acrescente as 3 linhas ao `AGENTS.md`.
 

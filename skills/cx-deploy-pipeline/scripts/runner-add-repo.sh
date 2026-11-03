@@ -12,8 +12,12 @@ pub="$(ssh "$host" "bk-add-repo $repo" | tail -n1)"
 case "$pub" in ssh-ed25519\ *) ;; *) echo "Falha ao obter a chave pública (bk-add-repo instalado em $host?)." >&2; exit 1;; esac
 # Idempotente: se a chave já está no repo (execução anterior que parou depois), não cadastra de novo (o GitHub dá 422).
 corpo="$(echo "$pub" | awk '{print $2}')"
-if gh api "repos/$repo/keys" --paginate --jq '.[].key' | awk '{print $2}' | grep -qxF "$corpo"; then
-  echo "Deploy key já cadastrada em $repo."
+# Só conta como configurada se for somente leitura; a mesma chave com escrita é erro, não sucesso.
+estado="$(gh api "repos/$repo/keys" --paginate --jq '.[] | "\(.read_only) \(.key)"' | awk -v k="$corpo" '$3 == k {print $1; exit}')"
+if [ "$estado" = "true" ]; then
+  echo "Deploy key (somente leitura) já cadastrada em $repo."
+elif [ -n "$estado" ]; then
+  echo "A chave já está em $repo COM ESCRITA. Remova-a em Settings → Deploy keys e rode de novo." >&2; exit 1
 else
   gh api "repos/$repo/keys" -f title="buildkite-$(echo "$host" | tr -c 'A-Za-z0-9\n' '-')" -f key="$pub" -F read_only=true >/dev/null
   echo "Deploy key (somente leitura) cadastrada em $repo."
