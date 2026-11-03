@@ -13,7 +13,9 @@ case "$pub" in ssh-ed25519\ *) ;; *) echo "Falha ao obter a chave pública (bk-a
 # Idempotente: se a chave já está no repo (execução anterior que parou depois), não cadastra de novo (o GitHub dá 422).
 corpo="$(echo "$pub" | awk '{print $2}')"
 # Só conta como configurada se for somente leitura; a mesma chave com escrita é erro, não sucesso.
-estado="$(gh api "repos/$repo/keys" --paginate --jq '.[] | "\(.read_only) \(.key)"' | awk -v k="$corpo" '$3 == k {print $1; exit}')"
+# GET separado do filtro: se falhar (auth, 403, rede), o set -e para aqui com o erro do próprio gh.
+chaves="$(gh api "repos/$repo/keys" --paginate --jq '.[] | "\(.read_only) \(.key)"')"
+estado="$(printf '%s\n' "$chaves" | awk -v k="$corpo" '$3 == k {print $1; exit}')"
 if [ "$estado" = "true" ]; then
   echo "Deploy key (somente leitura) já cadastrada em $repo."
 elif [ -n "$estado" ]; then
