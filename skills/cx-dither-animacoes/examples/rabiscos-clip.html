@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rabiscos desenhados por máscara</title>
+<!--
+  DEMONSTRA: rabiscos SVG (setas, sublinhado, circulo) "desenhados" por mascara CSS + clip-path,
+  em versao suave (pincel) e em passos (pixel, steps(8,end)). Botao repete a animacao.
+  USA: ../scripts/js/doodle-mask.js (drawDoodle, resetDoodle); SVGs em ../assets/doodles/
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #1235E6; color: #F5F7FF; font: 400 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px 24px; }
+  h1 { font: 800 30px/1.15 system-ui, sans-serif; margin: 0 0 8px; }
+  .hl { position: relative; display: inline-block; }
+  .hl i { position: absolute; left: -4px; right: -4px; bottom: -14px; height: 18px; }
+  .sec { margin: 16px 0; padding: 14px 16px; background: #0C27B4; position: relative; }
+  .sec h2 { font: 700 14px system-ui, sans-serif; margin: 0 0 8px; color: #C3CCFF; text-transform: uppercase; letter-spacing: .04em; }
+  .line { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-around; min-height: 84px; }
+  .line i { display: block; flex: none; }
+  .arrow { width: 100px; height: 70px; }
+  .circle { width: 100px; height: 68px; }
+  .star { width: 48px; height: 48px; }
+  button { min-height: 48px; border: 0; padding: 0 24px; background: #FFE24A; color: #0A1A7A; font: 800 16px system-ui, sans-serif; cursor: pointer; box-shadow: 0 4px 0 #B8932A; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sua loja está <span class="hl">pronta<i id="ul"></i></span>.</h1>
+  <p>Rabiscos entram desenhando, uma vez, e ficam.</p>
+
+  <section class="sec">
+    <h2>Em passos (pixel)</h2>
+    <div class="line">
+      <i class="arrow" data-d="seta-curva-pixel" data-steps="8"></i>
+      <i class="circle" data-d="circulo-aberto-pixel" data-steps="10"></i>
+      <i class="star" data-d="asterisco-pixel" data-steps="6"></i>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Suave (pincel)</h2>
+    <div class="line">
+      <i class="arrow" data-d="seta-curva-brush"></i>
+      <i class="circle" data-d="circulo-aberto-brush"></i>
+    </div>
+  </section>
+
+  <button id="replay" data-primary>Desenhar de novo</button>
+</main>
+
+<script type="module">
+import { drawDoodle, resetDoodle } from '../scripts/js/doodle-mask.js';
+const COLORS = ['#FFE24A', '#7BE8FF', '#B8F23B'];
+
+function run() {
+  document.querySelectorAll('[data-d]').forEach((el, i) => {
+    resetDoodle(el);
+    drawDoodle(el, { src: `../assets/doodles/${el.dataset.d}.svg`, color: COLORS[i % 3], steps: +(el.dataset.steps || 0), duration: 700, delay: i * 150 });
+  });
+  const ul = document.getElementById('ul');
+  resetDoodle(ul);
+  drawDoodle(ul, { src: '../assets/doodles/sublinhado-onda-pixel.svg', color: '#FFE24A', steps: 8, duration: 800, delay: 600 });
+}
+document.getElementById('replay').addEventListener('click', run);
+run();
+</script>
+</body>
+</html>

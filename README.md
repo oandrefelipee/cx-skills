@@ -6,7 +6,7 @@ Skills de agente para Claude Code, Codex, Cursor e outros agentes compatíveis c
 |---|---|
 | [`cx-deploy-pipeline`](skills/cx-deploy-pipeline/SKILL.md) | Leva uma mudança de PR até produção com segurança: lê e tria o CI, trata flaky, mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke e faz rollback. Mantém o host limpo (higiene com teto, CI com Docker rootless, runner multiprojeto). Independe de provedor (adaptador do projeto), com o GitHub como fonte da verdade. Relatório HTML por PR, catálogo de provedores com aprendizados e scripts sem dependência. |
 | [`cx-actionable-ui`](skills/cx-actionable-ui/SKILL.md) | Torna telas de produto orientadas a ação: menos texto, uma ação primária, estado em selo, ajuda em ⓘ. Planeja por blocos e wireframe ASCII antes de escrever, com orçamento de palavras e regras anti-slop. Princípios, 14 leis de UX, 30 técnicas, matriz de tom, bibliografia, guia visual e scripts. |
-| [`cx-dither-animacoes`](skills/cx-dither-animacoes/SKILL.md) | Cria, recria e adapta efeitos em dither, pixel art, halftone e grão, parados ou animados (botão com feixe de luz, fundos de campo, cenas de objetos, 3D leve por SDF, gráficos, celebração, cursor e fonte pixel). Canvas 2D, WebGL2/shader, CSS ou SVG, com cor ligada aos tokens do projeto, movimento reduzido, plano B sem WebGL e prova por captura. 12 snippets de stack, receitas, armadilhas, algoritmos e scripts sem dependência. |
+| [`cx-dither-animacoes`](skills/cx-dither-animacoes/SKILL.md) | Cria, recria e adapta efeitos em dither, pixel art, halftone, hachura e grão, parados ou animados: botão com feixe de luz, fundos de campo, cenas de objetos, 3D leve por SDF, gráficos, celebração, transição pixelada, tingir por paleta, rabiscos, imagem para dither e animação em arquivo (GIF, WebM). Canvas 2D, WebGL2/shader, CSS/SVG, React e Python; cor ligada aos tokens do projeto, movimento reduzido, plano B sem WebGL e prova por captura. 11 workflows, 22 referências, 12 snippets de stack, 13 exemplos em HTML, scripts Node e Python sem instalar nada. |
 
 ## Instalar
 
@@ -88,23 +88,28 @@ node skills/cx-deploy-pipeline/scripts/redigir.test.mjs
 
 ## O que vem na `cx-dither-animacoes`
 
-Divulgação progressiva: `SKILL.md` com a escolha de stack, a cor padrão, a árvore de decisão, mini workflows (W1 a W10) e a galeria de inspiração; depois a referência do item.
+Divulgação progressiva: `SKILL.md` com as decisões (stack, dispositivos, cor padrão), a árvore de decisão, os pedidos que viram arquivo ou script, mini workflows (W1 a W10), a galeria de inspiração "escolha na hora" e o adaptador; depois o item de que o pedido precisa.
 
 ```
 skills/cx-dither-animacoes/
-  SKILL.md                    decisões, árvore de decisão, mini workflows, galeria "escolha na hora", adaptador
-  references/
-    receitas.md               18 receitas com código (botão, campo, cena, SDF, gráfico, celebração, rota, vidro...)
-    algoritmos.md             Bayer, ruído azul, Floyd-Steinberg, Atkinson, halftone, paletas, linear x gama
-    stack-e-libs.md           Canvas2D, WebGL2, ogl/regl/twgl/three/pixi/p5, SVG/CSS, "quero X, use Y"
-    animacao-e-performance.md · acessibilidade-e-reduced-motion.md · prova-e-captura.md
-    armadilhas.md · workflow-referencias.md · adaptador-modelo.md
-  examples/                   botão Brasa/Placa, campo WebGL2, cena de objetos, hook React (HTML único)
-  scripts/                    capture · fps-probe · dither-image · bayer · blue-noise · resolve-tokens ·
-                              frame-stability · shader-playground · 12 snippets de stack (Node, sem dependências)
+  SKILL.md                    decisões, árvore de decisão, tabela de workflows, galeria, adaptador
+  workflows/                  11: imagem para dither · fundo animado · transição pixelada · tingir por paleta ·
+                              ilustração procedural · pixel-art nativa · rabiscos · halftone e hachura ·
+                              animação em arquivo · hero completo · verificar responsivo
+  references/                 receitas (18, com código) · algoritmos · stack e libs · animação e performance ·
+                              acessibilidade e movimento reduzido · prova e captura · armadilhas ·
+                              workflow de referências · fórmulas, WebGL, Canvas 2D, SVG/CSS, Python, paletas,
+                              estilos, ideias de cenas · adaptador-modelo.md
+  examples/                   13 HTMLs autônomos + hook React (índice em examples/README.md)
+  scripts/                    Node: capture · fps-probe · dither-image · bayer · blue-noise · resolve-tokens ·
+                              frame-stability · shader-playground · 12 snippets de stack
+                              Python: dither_image · dither_anim · procedural_sticker · doodle_gen · palette_tools · make_sheet
+                              JS: dither-gl · dither-canvas · svg-tone-filter · doodle-mask · motion-helpers
+                              verify: serve · shots · check-layout
+  assets/ · evals/            imagens de apoio e 12 pedidos de teste (formato do skill-creator)
 ```
 
-Teste dos scripts: `node skills/cx-dither-animacoes/scripts/selftest.mjs`.
+Teste dos scripts Node: `node skills/cx-dither-animacoes/scripts/selftest.mjs`. Python 3 com Pillow e numpy para os scripts Python.
 
 ## Como contribuir
 

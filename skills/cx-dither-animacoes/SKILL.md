@@ -1,6 +1,6 @@
 ---
 name: cx-dither-animacoes
-description: Cria, recria e adapta animações e estilos em dither, pixel art, halftone, Bayer, ruído azul, grão e retro, parados ou animados, em Canvas 2D, WebGL2/shader (GLSL), SDF/raymarching leve, CSS ou SVG, com cores ligadas aos tokens do projeto, movimento reduzido, pausa fora da tela e prova por captura (Playwright). Use SEMPRE que o pedido envolver dither, pontilhado, Bayer, pixelado, 8-bit, shader, WebGL, canvas animado, botão/CTA com feixe de luz na borda, fundo de campo granulado, cena de objetos em pixel, 3D "dither" sem three.js, gráfico em dither (Dither Kit), cursor ou fonte pixel, celebração/confete, transição por dissolução, "recriar este efeito/referência", converter imagem em dither (Floyd-Steinberg, Atkinson) ou escolher biblioteca (ogl, regl, twgl, three, pixi, p5). NÃO use para animação comum de interface sem trama (fade, mola, layout), vídeo e Lottie, 3D realista com malhas, dataviz sem estilo dither nem para quem só quer um GIF pronto.
+description: Cria, recria e adapta animações e estilos em dither, pixel art, halftone, Bayer, ruído azul, grão e retro, parados ou animados, em Canvas 2D, WebGL2/shader (GLSL), SDF/raymarching leve, CSS ou SVG, com cores ligadas aos tokens do projeto, movimento reduzido, pausa fora da tela e prova por captura (Playwright). Use SEMPRE que o pedido envolver dither, pontilhado, Bayer, pixelado, 8-bit, shader, WebGL, canvas animado, botão/CTA com feixe de luz na borda, fundo de campo granulado, cena de objetos em pixel, 3D "dither" sem three.js, gráfico em dither (Dither Kit), cursor ou fonte pixel, celebração/confete, transição por dissolução, "recriar este efeito/referência", converter imagem em dither (Floyd-Steinberg, Atkinson) ou escolher biblioteca (ogl, regl, twgl, three, pixi, p5). NÃO use para animação comum de interface sem trama (fade, mola, layout), vídeo e Lottie, 3D realista com malhas, dataviz sem estilo dither nem para quem só quer um GIF pronto. Também para halftone, meio-tom, hachura/gravura, retro/CRT, 1-bit, "estilo Higgsfield", sticker/adesivo com contorno, rabiscos por máscara, tingir/recolorir por paleta (gradient-map), converter imagem em pixel-art por Python e animação como arquivo (GIF, WebM).
 ---
 
 # Dither e animações em pixel (geral, para qualquer projeto)
@@ -16,6 +16,18 @@ Duas ideias sustentam tudo:
 Use: botão ou CTA "aceso", fundo de palco/cartão, cena ilustrada em pixel, objeto 3D leve pontilhado, gráfico com cara retro, número/cursor/fonte pixel, transição ou celebração em trama, imagem convertida em dither, recriar uma referência (site, Dribbble, Mobbin), escolher a tecnologia certa.
 
 Não use (e diga isso): animação comum sem trama; vídeo/Lottie; 3D fotorrealista; dataviz sem estilo dither; efeito que o `box-shadow` ou um `conic-gradient` já resolve; quando a pessoa quer só um GIF/imagem pronta.
+
+## Principio central
+
+**Dither e tempero, nao prato.** Quantizar tudo em poucos tons e pontilhar tudo vira ruido e cansa. O que funcionou: base limpa e chapada (cor lisa, sem borda fina) com dither em UM ou DOIS elementos por tela: fundo, sombra de contato, realce, confete, transicao, ou a ilustracao-heroi. Pergunte a si mesmo: "qual e o unico lugar onde a textura ganha o olhar?" e deixe o resto quieto.
+
+Por que isso importa: o dither chama atencao justamente por ser textura de alta frequencia. Dois focos disputam o olhar e o texto perde leitura.
+
+### Gosto de referencia (caso real das 3 primeiras rodadas; ajuste ao seu cliente)
+- Funcionou: cores chapadas e saturadas (um azul eletrico dominante), pixel-art nativa de 1 bit em grade de 8 px, adesivo (contorno branco de recorte), sombra dura que "afunda" o botao, dither so em algumas coisas, transicao de pagina em dither pixelado, paleta de 4 tons por material.
+- Foi rejeitado: 3D brilhante, neon, bloom, glow, paletas quentes/pastel genericas, visual "cromado de IA", bordas finas, texto demais, dither em tudo, gravura por hachura como visual principal (a tecnica ficou, o gosto nao).
+- Depois dessas rodadas o autor aprovou paletas vibrantes (lima, laranja, menta) sobre o azul da plataforma: o gosto muda, confirme antes de assumir.
+- Se o usuario nao disse o gosto dele, pergunte (ou mostre 2 a 3 variacoes pequenas) antes de gastar tempo polindo.
 
 ## Antes de começar: 6 perguntas (leia `references/workflow-referencias.md` §6)
 
@@ -78,6 +90,27 @@ TECNOLOGIA (decisão do autor, 2026-11-05: NÃO há stack padrão fixo; a cada p
  ├─ só CSS/SVG (sem JS) ................................. scripts/snippets/css-only.html
  └─ sem WebGL2 no alvo ................................... Canvas 2D ou gradiente CSS de reserva
 ```
+
+## Pedidos que viram arquivo ou script (workflows/)
+
+| Pedido | Tecnica preferida | Workflow | Script / exemplo |
+|---|---|---|---|
+| Converter uma imagem em dither, pixel-art de N cores, halftone, hachura | Python (Pillow + numpy) | `workflows/imagem-para-dither.md` | `scripts/python/dither_image.py` |
+| Fundo animado em dither (hero, painel, card) | Canvas 2D (leve) ou WebGL (mais rico) | `workflows/fundo-animado.md` | `scripts/js/dither-canvas.js`, `scripts/js/dither-gl.js`, `examples/bg-animado-canvas.html`, `examples/shader-gradient-map.html` |
+| Transicao de pagina/passo pixelada, dissolve, "pixel-resolve" | WebGL overlay (modo transicao) ou mascara CSS (fallback) | `workflows/transicao-pixelada.md` | `scripts/js/dither-gl.js`, `examples/transicao-pixelada.html` |
+| Recolorir uma imagem cinza por paleta (trocar tema sem regerar) | Filtro SVG discreto ou gradient-map em shader | `workflows/tingir-por-paleta.md` | `scripts/js/svg-tone-filter.js`, `scripts/python/palette_tools.py`, `examples/tingir-paleta-svg.html` |
+| Objeto/ilustracao feito por codigo (moeda, nota, icone, adesivo) | Python procedural com rampas de 4 tons + Bayer | `workflows/ilustracao-procedural.md` | `scripts/python/procedural_sticker.py` |
+| Pixel-art nativa (grade logica, `image-rendering: pixelated`) | Gerar sem antialias e validar a grade | `workflows/pixel-art-nativa.md` | `scripts/python/dither_image.py` (modo pixel-grid) |
+| Halftone 2D/3D, gravura, hachura | Shader (hachura/halftone) ou Python | `workflows/halftone-e-hachura.md` | `examples/halftone-hachura.html` |
+| UI com realces: sombra pontilhada, marcador, confete, rabiscos desenhados | Canvas 2D + SVG/CSS | `workflows/rabiscos-e-marcadores.md` | `scripts/js/dither-canvas.js`, `scripts/js/doodle-mask.js`, `examples/rabiscos-clip.html` |
+| Animacao como arquivo (GIF, PNG-seq, WebM/MP4: logo, reveal, pixel-resolve, loop) | Python gera os quadros | `workflows/animacao-em-arquivo.md` | `scripts/python/dither_anim.py` |
+| Gerar um conjunto de rabiscos SVG (brush, engrave, pixel) | Gerador em Python + mascara CSS | `workflows/rabiscos-e-marcadores.md` | `scripts/python/doodle_gen.py` |
+| Halftone 3D (esfera, cubo) sem three.js | Fragment shader com normal analitica | `workflows/halftone-e-hachura.md` | `examples/halftone-3d.html` |
+| Pagina de hero completa com 1 a 2 focos de dither | Composicao de motores baratos | `workflows/hero-completo.md` | `examples/hero-completo.html` |
+| Objetos que migram entre paginas/passos (morph continuo) | FLIP por slots + dither por quadro | `references/animacao.md` (secao 3) | `scripts/js/motion-helpers.js` (`flipSlots`), `examples/flip-slots.html` |
+| Provar que funciona (celular, console, layout) | Playwright + prints | `workflows/verificar-responsivo.md` | `scripts/verify/serve.mjs`, `shots.cjs`, `check-layout.cjs` |
+
+Pedido hibrido ("hero com fundo em dither, titulo e botao com relevo, entrada pixelada"): combine. Fundo = Canvas 2D; entrada = WebGL ou CSS `steps()`; botao = CSS (sombra dura). Um motor por superficie, nunca tudo em WebGL.
 
 ## Mini workflows
 
@@ -188,10 +221,79 @@ Pedido do autor (2026-11-05): estas peças são **referência para se inspirar, 
 | `scripts/frame-stability.mjs` | mede quanto a trama "ferve" entre quadros (Bayer ~1%, Floyd-Steinberg ~25%) |
 | `scripts/selftest.mjs`, `test-playground.mjs`, `test-snippets.mjs` | autotestes dos scripts (114), do playground (26) e dos snippets (24) |
 | `references/adaptador-modelo.md` | modelo do adaptador do projeto (tokens, motor local, peça-modelo, gosto, armadilhas locais) |
+| `workflows/*.md` (11) | imagem para dither, fundo animado, transição pixelada, tingir por paleta, ilustração procedural, pixel-art nativa, rabiscos, halftone e hachura, animação em arquivo, hero completo, verificar responsivo (tabela "Pedidos que viram arquivo ou script") |
+| `references/algoritmos-formulas.md`, `webgl-shader.md`, `canvas2d.md`, `svg-css.md`, `python-imagem.md`, `animacao.md`, `paletas.md`, `bibliotecas.md`, `performance-a11y.md`, `verificacao.md`, `estilos-e-referencias.md`, `aprendizados-3-rodadas.md`, `ideias-de-cenas.md` | fórmulas e código por motor (GLSL, Canvas 2D, SVG/CSS, Python), movimento, paletas e contraste, estilos de referência e ideias de cenas |
+| `scripts/python/*.py` (6) | `dither_image` (Bayer, Floyd-Steinberg, Atkinson, halftone, hachura), `dither_anim` (GIF/WebM), `procedural_sticker`, `doodle_gen`, `palette_tools`, `make_sheet` (Pillow + numpy) |
+| `scripts/js/*.js` (5) e `scripts/verify/*` (3) | `dither-gl`, `dither-canvas`, `svg-tone-filter`, `doodle-mask`, `motion-helpers`; `serve.mjs`, `shots.cjs`, `check-layout.cjs` |
+| `examples/*.html` (13) e `assets/` | exemplos autônomos (fundo, transição, halftone 3D, hero, FLIP por slots, rabiscos, tingir) e imagens de apoio; índice em `examples/README.md` |
+| `evals/evals.json` | 12 pedidos de teste com expectativas (formato do skill-creator) |
 
 ## Adaptador por projeto
 
 A skill é genérica. O que é do projeto fica num adaptador dentro dele, descoberto nesta ordem: `.cx/dither/adaptador.md`, a seção do `AGENTS.md` ou `CLAUDE.md` (até 3 linhas apontando o arquivo) e `docs/design/dither-animacoes/`. Ele diz: quais são os tokens de cor e de tema; se há motor ou componentes locais para reaproveitar (e onde); qual peça real é o modelo de qualidade; paletas alternativas aprovadas; o gosto já registrado (vereditos, o que irritou); armadilhas locais. Sem adaptador, pergunte as 6 perguntas e siga as decisões acima. Modelo em [`references/adaptador-modelo.md`](references/adaptador-modelo.md).
+
+## Receita minima (para nao depender de arquivo nenhum)
+
+Dither ordenado em 4 tons, a base de quase tudo:
+
+```
+bayer8[x%8][y%8]  ->  limiar t em (0,1)         // (v + 0.5) / 64
+tom = min( floor( lum * 3 + t ), 3 )            // lum em [0,1], 4 tons = indices 0..3
+cor = rampa[tom]
+```
+
+- Matriz Bayer por recursao: `M(2n) = [[4M, 4M+2],[4M+3, 4M+1]]`, normalizada `(v+0.5)/N^2`.
+- Em GLSL sem arrays: `b2(a)=fract(a.x/2.+a.y*a.y*.75); b4(a)=b2(.5*a)*.25+b2(a); b8(a)=b4(.5*a)*.25+b2(a);` (a = coordenada de celula inteira).
+- **Celula de dither em unidades de TELA, nao da textura**: `px_canvas = cell_css * DPR / escala_do_objeto`. Sem isso o grao borra quando o objeto encolhe ou morfa.
+- Rampa de 4 tons por material (sombra, medio-escuro, medio-claro, brilho), com luz sempre da mesma direcao (cima-esquerda) em todos os objetos para formarem um universo so.
+- Linhas finas (filetes, guilhoche, texto) em tom forcado, SEM dither; contorno de tinta de 3 px; adesivo branco de 12 px; sombra plana deslocada.
+- Para pixel-art: `image-rendering: pixelated` (ou textura NEAREST sem mipmap) e tamanhos em multiplos inteiros da celula.
+
+## Checklist de qualidade (passe antes de entregar)
+- [ ] **Foco unico**: o dither esta em 1 a 2 elementos, nao na tela inteira.
+- [ ] **Leitura**: texto >= 12 a 13 px, sem dither por tras; titulo com contraste >= 4.5:1 (3:1 se grande). Veja `references/paletas.md`.
+- [ ] **Paleta**: rampas ordenadas do escuro ao claro; testada sobre fundo azul, branco e escuro; objeto da cor do fundo so le com contorno/adesivo.
+- [ ] **Grade**: celula consistente na tela (px_canvas calculado por DPR e escala); sem meia-celula nas bordas; `image-rendering` correto.
+- [ ] **Movimento**: fundo a 12 a 15 fps; 1 ou 2 elementos animados por tela; `prefers-reduced-motion` mostra um quadro estatico; pausa com `document.hidden` e fora da viewport; nada pisca mais de 3 vezes por segundo.
+- [ ] **Desempenho**: canvas pequeno (fundo em 1/CELL da resolucao), DPR limitado a 1.5 em WebGL, um contexto por superficie, contexto destruido ao fechar.
+- [ ] **Fallback**: sem WebGL ou sem JS ha imagem pre-assada, gradiente CSS ou quadro textual; a informacao nunca vive so no dither.
+- [ ] **Mobile**: 360x640 a 430x932 sem rolagem horizontal; botao primario dentro da viewport; alvos de toque >= 44 px.
+- [ ] **Verificado de verdade**: servido por HTTP (nunca `file://`), prints abertos e OLHADOS, console sem erros.
+
+## Comandos rapidos
+```bash
+# imagem -> dither (algos: bayer2|bayer4|bayer8|floyd|atkinson|halftone|hatch; paleta escuro->claro)
+python3 scripts/python/dither_image.py in.png out.png --algo bayer8 --preset pixel-azul --cell 4
+python3 scripts/python/dither_image.py in.png out.png --algo bayer8 --palette "#0A1A7A,#7BE8FF,#F5F7FF,#FFE24A" --pixel-grid 128
+# paletas e contraste
+python3 scripts/python/palette_tools.py presets
+python3 scripts/python/palette_tools.py contrast "#FFE24A" "#0A1A7A"
+# animacao como arquivo (modos: reveal|pixel-resolve|sweep|breathe|wipe-overlay); GIF + WebM com alfa
+python3 scripts/python/dither_anim.py reveal in.png -o out/reveal.gif --preset notas --fps 20 --duration 1.4 --video out/reveal.webm
+# conjunto de rabiscos SVG (currentColor) com prancha de conferencia
+python3 scripts/python/doodle_gen.py --style all --out ./doodles --seed 7 --contact
+# objeto procedural + adesivo; prancha sobre varios fundos
+python3 scripts/python/procedural_sticker.py coin out.png --ramp ouro --cell 4
+python3 scripts/python/make_sheet.py a.png b.png -o prancha.png --bgs azul,branco,escuro,xadrez --labels
+# servir e verificar
+node scripts/verify/serve.mjs . 8790
+node scripts/verify/shots.cjs http://127.0.0.1:8790/examples/bg-animado-canvas.html ./prints --sizes 390x844,1280x800
+```
+Exemplos autonomos (sirva por HTTP): `examples/*.html`, descritos em `examples/README.md`; indice dos scripts em `scripts/README.md`. Imagens e rabiscos de apoio: `assets/`. Em duvida sobre uma flag, rode o script com `--help`.
+
+## Como adaptar a qualquer pedido
+1. Classifique pela tabela; se cair em duas linhas, divida em duas superficies.
+2. Escolha o motor mais barato que entrega o look: CSS/SVG < Canvas 2D < WebGL. Suba de nivel so se precisar de textura, 60 fps ou efeito por pixel.
+3. Defina paleta de 3 ou 4 tons e a celula (2 a 4 css px para objetos, 4 a 6 para fundos).
+4. Gere uma versao pequena, olhe o print, ajuste celula e rampa antes de animar.
+5. Anime por ultimo, com mola (Motion) ou `steps()`, e valide reduced-motion.
+6. Entregue 2 a 3 variacoes quando o gosto e incerto, todas salvas e catalogadas; diga o que ficou duvidoso.
+
+## Padroes de entrega
+- Prancha ou galeria navegavel, nao so um arquivo solto.
+- Nada se apaga: versoes multiplas salvas.
+- Explique o que ficou duvidoso (ex.: "a IA nao respeitou a grade 8x8, normalizei e validei por script").
+- Onde nao tiver certeza de uma API ou flag, marque "verificar" e teste antes de afirmar.
 
 ## Regras de ouro
 
@@ -210,7 +312,7 @@ A skill é genérica. O que é do projeto fica num adaptador dentro dele, descob
 
 ## O que não foi provado neste pacote
 
-FPS em GPU real, celular, Safari/Firefox; vidro líquido (lente de refração) fora do Chromium (o laboratório de origem viu refração só no Chromium, o cabeçalho da lib `vitrio` diz Chrome, Safari e Firefox: testar antes de afirmar); `@number-flow/react` e `motion` sem teste visual neste pacote; WebGPU só por software (SwiftShader); dither ancorado à superfície em 3D (Pope/Dither3D) está descrito, não implementado; ImageMagick 7 e Aseprite não foram executados; `offset-path: rect()` fora do Chromium (o botão tem `@supports`); vazamento de WebGL ao redimensionar no iOS e o teto exato de contextos (relatados, não medidos); fontes Google (Jersey 25 etc.) não carregam no sandbox das capturas.
+Os scripts Python/JS, os 11 workflows e os exemplos vindos da antiga `dither-motion` foram revisados na fusão, mas não reexecutados depois dela; rode `scripts/selftest.mjs` (100 verificações) e um dos comandos de "Comandos rápidos" antes de confiar. FPS em GPU real, celular, Safari/Firefox; vidro líquido (lente de refração) fora do Chromium (o laboratório de origem viu refração só no Chromium, o cabeçalho da lib `vitrio` diz Chrome, Safari e Firefox: testar antes de afirmar); `@number-flow/react` e `motion` sem teste visual neste pacote; WebGPU só por software (SwiftShader); dither ancorado à superfície em 3D (Pope/Dither3D) está descrito, não implementado; ImageMagick 7 e Aseprite não foram executados; `offset-path: rect()` fora do Chromium (o botão tem `@supports`); vazamento de WebGL ao redimensionar no iOS e o teto exato de contextos (relatados, não medidos); fontes Google (Jersey 25 etc.) não carregam no sandbox das capturas.
 
 ## Procedência e licenças
 

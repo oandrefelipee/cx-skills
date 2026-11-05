@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Halftone 3D em um fragment shader</title>
+<!--
+  DEMONSTRA: halftone (pontos que CRESCEM com a luz) e dither Bayer sobre uma forma iluminada
+  (esfera ou cubo) desenhada INTEIRA no fragment shader: sem three.js, sem malha, sem textura.
+  Esfera = normal analítica; cubo = interseção raio-caixa ortográfica (slabs) girando. A luz segue o
+  ponteiro (mouse/toque); sem ponteiro ela deriva devagar. Controle de célula em px de tela.
+  Respeita prefers-reduced-motion: sem rotação nem deriva, e desenha só sob demanda (ponteiro/controles).
+  USA: nada de ../scripts/js (WebGL direto, para mostrar o shader completo).
+
+  COMO SERIA COM three.js (NÃO usado aqui):
+    1) cena normal: new THREE.Mesh(new THREE.SphereGeometry(1,64,64) | BoxGeometry, new THREE.MeshStandardMaterial()),
+       DirectionalLight movida no pointermove;
+    2) renderizar para um WebGLRenderTarget e passar por um EffectComposer com um ShaderPass cujo fragment
+       lê a luminância do alvo e aplica o MESMO halftone/Bayer deste arquivo (grade girada 45 graus, raio
+       = sqrt(luz)*0.6, amostrando a luz no CENTRO do ponto); ou usar three/examples/jsm/postprocessing/HalftonePass;
+    3) o tamanho da célula entra como uniform em px de dispositivo (css * devicePixelRatio).
+  Vantagem do three.js: malhas reais, sombras e materiais; custo: dependência e um passe extra de tela cheia.
+-->
+<style>
+  :root { --ink:#F5F7FF; --navy:#0A1A7A; --accent:#FFE24A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--navy); color: var(--ink); font: 400 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px 28px; display: grid; gap: 12px; justify-items: center; }
+  h1 { font: 800 24px/1.15 system-ui, sans-serif; margin: 0; justify-self: start; }
+  canvas { width: min(100%, 560px); aspect-ratio: 1; display: block; touch-action: none; cursor: crosshair; background: var(--navy); }
+  .ctl { width: min(100%, 560px); display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  label { display: grid; gap: 4px; font-size: 13px; color: #C3CCFF; }
+  label.wide { grid-column: 1 / -1; }
+  select, input[type=range] { min-height: 44px; font: inherit; width: 100%; }
+  select { background: #0C27B4; color: var(--ink); border: 0; padding: 0 10px; }
+  .hint { font-size: 13px; color: #9FB0FF; width: min(100%, 560px); }
+  .warn { display: none; color: #FF8FA8; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Halftone 3D (shader)</h1>
+  <canvas id="cv" role="img" aria-label="Forma 3D em halftone; mova o ponteiro para mover a luz"></canvas>
+  <p class="warn" id="warn">WebGL indisponível neste navegador.</p>
+  <div class="ctl">
+    <label>Forma
+      <select id="shape"><option value="0">Esfera</option><option value="1">Cubo</option></select>
+    </label>
+    <label>Estilo
+      <select id="style"><option value="0">Halftone (pontos)</option><option value="1">Bayer 8x8</option></select>
+    </label>
+    <label class="wide"><span>Célula: <b id="cv_">10</b> px de tela</span>
+      <input id="cell" type="range" min="4" max="24" value="10">
+    </label>
+  </div>
+  <p class="hint">Mova (ou arraste) o ponteiro sobre a forma para mover a luz.</p>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const cv = $('cv');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const gl = cv.getContext('webgl', { antialias: false, alpha: false });
+if (!gl) { $('warn').style.display = 'block'; throw new Error('WebGL indisponivel'); }
+
+const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+const FS = `precision highp float;
+uniform vec2 res; uniform float cell, shape, style, ang; uniform vec3 light;
+float b2(vec2 a){a=floor(a);return fract(a.x/2.+a.y*a.y*.75);}
+float b4(vec2 a){return b2(.5*a)*.25+b2(a);}
+float b8(vec2 a){return b4(.5*a)*.25+b2(a);}
+mat3 rotX(float a){float c=cos(a),s=sin(a);return mat3(1.,0.,0., 0.,c,s, 0.,-s,c);}
+mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0.,-s, 0.,1.,0., s,0.,c);}
+
+// devolve (luz 0..1, cobertura 0/1) da forma no ponto p (px de dispositivo)
+vec2 shade(vec2 p){
+  float R=.36*min(res.x,res.y);
+  vec2 q=(p-.5*res)/R;               // forma com raio ~1; y para cima
+  vec3 n=vec3(0.,0.,1.); float hit=0.;
+  if(shape<.5){                      // esfera: normal analitica
+    float r2=dot(q,q);
+    if(r2<1.){hit=1.;n=vec3(q,sqrt(1.-r2));}
+  }else{                             // cubo ortografico: raio contra caixa de meia-aresta h (metodo dos slabs)
+    mat3 M=rotY(ang)*rotX(.55);      // cubo -> mundo
+    vec3 o=vec3(q*1.2,3.)*M;   // camera em +z (como a esfera), olhando para -z        // v*M == transpose(M)*v (ortonormal): mundo -> cubo
+    vec3 d=vec3(0.,0.,-1.)*M+vec3(1e-6);
+    vec3 inv=1./d, h=vec3(.62);
+    vec3 t0=(-h-o)*inv, t1=(h-o)*inv;
+    vec3 tmin=min(t0,t1), tmax=max(t0,t1);
+    float tn=max(max(tmin.x,tmin.y),tmin.z), tf=min(min(tmax.x,tmax.y),tmax.z);
+    if(tf>max(tn,0.)){
+      hit=1.;
+      vec3 nb=-sign(d)*step(tmin.yzx,tmin.xyz)*step(tmin.zxy,tmin.xyz); // face de entrada
+      n=M*nb;
+    }
+  }
+  vec3 L=normalize(light);
+  float lum=.07+.93*max(dot(n,L),0.);
+  return vec2(lum,hit);
+}
+
+void main(){
+  vec2 p=gl_FragCoord.xy;
+  vec3 bg=vec3(.039,.102,.478), t0=vec3(.071,.18,.78), t1=vec3(.48,.91,1.), t2=vec3(.96,.97,1.);
+  vec3 col=bg;
+  if(style<.5){
+    // halftone: grade girada 45 graus; a LUZ e amostrada no centro de cada ponto e a area do ponto cresce com ela
+    const float S=.70710678;
+    mat2 Rm=mat2(S,-S,S,S), Ri=mat2(S,S,-S,S);
+    vec2 g=Rm*p/cell, id=floor(g), f=fract(g)-.5;
+    vec2 sh=shade(Ri*(id+.5)*cell);
+    float r=sqrt(sh.x)*.6, d=length(f), aa=1.2/cell;
+    float dotv=smoothstep(r+aa,r-aa,d)*sh.y;
+    col=mix(bg,mix(t1,t2,smoothstep(.55,1.,sh.x)),dotv);
+  }else{
+    // Bayer 8x8 em celulas de cell px, 3 tons
+    vec2 cid=floor(p/cell);
+    vec2 sh=shade((cid+.5)*cell);
+    float l=sh.x+(b8(cid)-.5)*.55;
+    vec3 c=l<.30?t0:(l<.62?t1:t2);
+    col=sh.y>.5?c:bg;
+  }
+  gl_FragColor=vec4(col,1.);
+}`;
+const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+const pr = gl.createProgram();
+gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(pr); gl.useProgram(pr);
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+const U = n => gl.getUniformLocation(pr, n);
+
+let dpr = 1, ang = 0.6, light = [-0.5, 0.6, 0.75], touched = false, raf = 0, last = 0;
+function size() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.round(cv.clientWidth * dpr);
+  if (cv.width !== w) { cv.width = w; cv.height = w; }
+  draw();
+}
+function draw() {
+  gl.viewport(0, 0, cv.width, cv.height);
+  gl.uniform2f(U('res'), cv.width, cv.height);
+  gl.uniform1f(U('cell'), +$('cell').value * dpr);
+  gl.uniform1f(U('shape'), +$('shape').value);
+  gl.uniform1f(U('style'), +$('style').value);
+  gl.uniform1f(U('ang'), ang);
+  gl.uniform3f(U('light'), ...light);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+// loop so quando ha algo se movendo por conta propria (cubo girando / luz a deriva) e sem reduced-motion
+function loop(now) {
+  raf = requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
+  if (document.hidden) return;
+  if ($('shape').value === '1') ang += dt * 0.55;
+  if (!touched) light = [Math.cos(now / 2200) * 0.8, 0.45 + Math.sin(now / 3100) * 0.3, 0.75];
+  draw();
+}
+if (!reduced) raf = requestAnimationFrame(loop);
+
+function point(e) {
+  const r = cv.getBoundingClientRect();
+  touched = true;
+  light = [((e.clientX - r.left) / r.width - 0.5) * 2, -((e.clientY - r.top) / r.height - 0.5) * 2, 0.7];
+  if (reduced) draw();
+}
+cv.addEventListener('pointermove', point);
+cv.addEventListener('pointerdown', point);
+for (const id of ['shape', 'style', 'cell']) $(id).addEventListener('input', () => { $('cv_').textContent = $('cell').value; if (reduced || !raf) draw(); });
+addEventListener('resize', size);
+size();
+</script>
+</body>
+</html>
