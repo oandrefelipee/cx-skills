@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tingir por paleta com filtro SVG</title>
+<!--
+  DEMONSTRA: uma imagem cinza de 4 tons (assets/cinema-*.png) tingida por filtro SVG
+  (feColorMatrix + feComponentTransfer discrete), com troca de paleta ao vivo e sem WebGL.
+  USA: ../scripts/js/svg-tone-filter.js (mountTone, applyTone, setTones)
+-->
+<style>
+  :root { --ink:#F5F7FF; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0A1A7A; color: var(--ink); font: 400 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 32px; }
+  h1 { font: 800 24px/1.15 system-ui, sans-serif; margin: 0 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .cell { padding: 12px; display: grid; place-items: center; gap: 8px; text-align: center; }
+  .cell img { width: 100%; max-width: 260px; height: auto; display: block; image-rendering: pixelated; }
+  .cell small { font-size: 13px; color: #C3CCFF; }
+  .pal { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .pal button { min-height: 44px; padding: 0 16px; border: 0; font: 700 14px system-ui, sans-serif; color: #0A1A7A; background: #F5F7FF; cursor: pointer; }
+  .pal button[aria-pressed=true] { background: #FFE24A; box-shadow: 0 3px 0 #B8932A; }
+  .sw { display: inline-flex; vertical-align: middle; margin-left: 8px; }
+  .sw i { width: 12px; height: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tingir por paleta (filtro SVG)</h1>
+  <div class="pal" id="pal" role="group" aria-label="Paleta"></div>
+  <div class="grid">
+    <div class="cell" style="background:#1235E6"><img id="a" src="../assets/cinema-moedas.png" alt="moedas"><small>cinza original → filtro</small></div>
+    <div class="cell" style="background:#F5F7FF"><img id="b" src="../assets/cinema-grafico.png" alt="gráfico"><small style="color:#0A1A7A">o mesmo filtro, outro fundo</small></div>
+  </div>
+</main>
+
+<script type="module">
+import { mountTone, applyTone, setTones } from '../scripts/js/svg-tone-filter.js';
+
+// ordem: sombra -> luz. Teste variacoes de ordem: o mapeamento discreto depende dela.
+const PALS = {
+  'pixel-azul': ['#0A1A7A', '#7BE8FF', '#F5F7FF', '#FFE24A'],
+  notas: ['#4C1D95', '#2DD4BF', '#FFC933', '#F2ECDC'],
+  lima: ['#1F6B3A', '#6FB82E', '#B8F23B', '#F4FFD0'],
+  coral: ['#8A1F3B', '#D63A5E', '#FF4F7B', '#FFC2CF'],
+  cinema: ['#0A0A0A', '#5A5A5A', '#B0B0B0', '#FFFFFF'],
+};
+mountTone('tone', PALS['pixel-azul']);
+applyTone(document.getElementById('a'), 'tone');
+applyTone(document.getElementById('b'), 'tone');
+
+const box = document.getElementById('pal');
+for (const [name, tones] of Object.entries(PALS)) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.setAttribute('aria-pressed', name === 'pixel-azul');
+  b.innerHTML = name + '<span class="sw">' + tones.map(c => `<i style="background:${c}"></i>`).join('') + '</span>';
+  b.addEventListener('click', () => {
+    setTones('tone', tones); // troca ao vivo, sem remontar o filtro
+    box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+  box.append(b);
+}
+</script>
+</body>
+</html>

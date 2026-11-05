@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transição pixelada entre telas</title>
+<!--
+  DEMONSTRA: overlay Bayer (modo 'overlay' do shader) cobrindo a tela 1, trocando para a tela 2 sob
+  a cobertura e revelando em seguida. Sem WebGL cai num fade simples.
+  USA: ../scripts/js/dither-gl.js (DitherGL, modo 'overlay') e ../scripts/js/motion-helpers.js (tween)
+-->
+<style>
+  :root { --navy:#0A1A7A; --blue:#1235E6; --cyan:#7BE8FF; --accent:#FFE24A; --ink:#F5F7FF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--navy); color: var(--ink); font: 400 16px/1.5 system-ui, sans-serif; }
+  .app { position: relative; width: min(100vw, 480px); height: 100vh; max-height: 800px; margin: 0 auto; overflow: hidden; background: var(--blue); }
+  .screen { position: absolute; inset: 0; padding: 32px 24px; display: flex; flex-direction: column; justify-content: center; gap: 16px; opacity: 0; pointer-events: none; }
+  .screen.on { opacity: 1; pointer-events: auto; }
+  .screen.two { background: #0C27B4; }
+  h1 { font: 800 32px/1.1 system-ui, sans-serif; margin: 0; }
+  p { margin: 0; color: #C3CCFF; }
+  button { min-height: 52px; border: 0; background: var(--accent); color: var(--navy); font: 800 17px system-ui, sans-serif; cursor: pointer; box-shadow: 0 4px 0 #B8932A; }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #B8932A; }
+  canvas.ov { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; visibility: hidden; }
+  .dots { display: flex; gap: 8px; } .dots i { width: 12px; height: 12px; background: #5B78FF; } .dots i.on { background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <section class="screen on" id="s1">
+    <div class="dots"><i class="on"></i><i></i></div>
+    <h1>Tela 1</h1>
+    <p>Toque no botão: a tela é coberta por um dither pixelado e revelada com o próximo passo.</p>
+    <button id="next" data-primary>Continuar</button>
+  </section>
+  <section class="screen two" id="s2">
+    <div class="dots"><i></i><i class="on"></i></div>
+    <h1>Tela 2</h1>
+    <p>Pronto. A troca aconteceu enquanto o overlay cobria tudo.</p>
+    <button id="back">Voltar</button>
+  </section>
+  <canvas class="ov" id="ov" aria-hidden="true"></canvas>
+</div>
+
+<script type="module">
+import { DitherGL } from '../scripts/js/dither-gl.js';
+import { tween, sleep } from '../scripts/js/motion-helpers.js';
+
+const $ = id => document.getElementById(id);
+const app = $('app'), cv = $('ov');
+let gl = null;
+try { gl = new DitherGL(cv); } catch (e) { console.warn(e.message); }
+
+const size = () => gl && gl.resize(app.clientWidth, app.clientHeight);
+size(); addEventListener('resize', size);
+
+// cobre (t 0->1), troca a tela, revela (t 1->0). cell = 16 px de tela por degrau de Bayer.
+async function go(from, to) {
+  if (!gl) { // fallback sem WebGL: fade
+    from.classList.remove('on'); to.classList.add('on'); return;
+  }
+  const o = { mode: 'overlay', px: 16, colors: ['#0C27B4', '#7BE8FF'], sweep: 0 };
+  cv.style.visibility = 'visible';
+  await tween(t => gl.draw({ ...o, t }), 450);
+  from.classList.remove('on'); to.classList.add('on');
+  await sleep(60);
+  await tween(t => gl.draw({ ...o, t: 1 - t }), 450);
+  gl.clear(); cv.style.visibility = 'hidden';
+}
+let busy = false;
+const wire = (btn, from, to) => btn.addEventListener('click', async () => { if (busy) return; busy = true; await go(from, to); busy = false; });
+wire($('next'), $('s1'), $('s2'));
+wire($('back'), $('s2'), $('s1'));
+window.__go = () => $('next').click(); // gancho p/ testes
+</script>
+</body>
+</html>

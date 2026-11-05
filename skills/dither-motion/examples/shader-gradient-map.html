@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gradient-map em shader (WebGL)</title>
+<!--
+  DEMONSTRA: tingir uma imagem de assets/ por paleta com dither Bayer em WebGL, trocar modo
+  (gradient-map | hatch | passthrough), tamanho do pixel e repetir a entrada (reveal por mola).
+  USA: ../scripts/js/dither-gl.js (DitherGL, loadImage) e ../scripts/js/motion-helpers.js (spring)
+  Fallback sem WebGL: mostra a imagem original e um aviso (veja dither-canvas.js/svg-tone-filter.js).
+-->
+<style>
+  :root { --bg:#1235E6; --ink:#F5F7FF; --navy:#0A1A7A; --accent:#FFE24A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 32px; }
+  h1 { font: 800 24px/1.15 system-ui, sans-serif; margin: 0 0 12px; }
+  .view { background: var(--navy); display: grid; place-items: center; padding: 12px; }
+  canvas { width: min(100%, 400px); aspect-ratio: 1; display: block; }
+  .ctl { display: grid; gap: 12px; margin-top: 16px; }
+  label { display: grid; gap: 4px; font-size: 13px; color: #C3CCFF; }
+  select, input[type=range], button { min-height: 44px; font: inherit; }
+  select { background: var(--navy); color: var(--ink); border: 0; padding: 0 10px; }
+  button { background: var(--accent); color: var(--navy); border: 0; font-weight: 800; padding: 0 20px; cursor: pointer; }
+  .warn { background: #FF4F7B; color: #fff; padding: 12px; display: none; margin-top: 12px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Gradient-map em shader</h1>
+  <div class="view"><canvas id="cv" aria-label="Imagem em dither"></canvas></div>
+  <div class="warn" id="warn">WebGL indisponível: mostrando a imagem sem dither. Use dither-canvas.js ou svg-tone-filter.js.</div>
+  <div class="ctl">
+    <div class="row">
+      <label>Modo
+        <select id="mode"><option>gradient-map</option><option>hatch</option><option>passthrough</option></select>
+      </label>
+      <label>Paleta
+        <select id="pal">
+          <option value="pixel-azul">pixel-azul</option>
+          <option value="notas">notas</option>
+          <option value="cinema">cinema</option>
+          <option value="lima">lima</option>
+        </select>
+      </label>
+    </div>
+    <label><span>Tamanho do pixel (px de tela): <b id="pxv">4</b></span>
+      <input id="px" type="range" min="1" max="16" value="4">
+    </label>
+    <button id="replay" data-primary>Repetir entrada</button>
+  </div>
+</main>
+
+<script type="module">
+import { DitherGL, loadImage } from '../scripts/js/dither-gl.js';
+import { spring } from '../scripts/js/motion-helpers.js';
+window.DITHER_MOTION_CDN = false; // exemplo autonomo: sem rede (fallback rAF); remova para usar a lib Motion
+
+const PAL = {
+  'pixel-azul': ['#0A1A7A', '#7BE8FF', '#F5F7FF', '#FFE24A'],
+  notas: ['#4C1D95', '#2DD4BF', '#FFC933', '#F2ECDC'],
+  cinema: ['#0A0A0A', '#5A5A5A', '#B0B0B0', '#FFFFFF'],
+  lima: ['#1F6B3A', '#6FB82E', '#B8F23B', '#F4FFD0'],
+};
+const $ = id => document.getElementById(id);
+const cv = $('cv');
+let gl = null, reveal = 1;
+
+function draw() {
+  if (!gl) return;
+  gl.draw({ mode: $('mode').value, px: +$('px').value, colors: PAL[$('pal').value], reveal, steps: 4, hatchPer: 5, aDither: false });
+}
+
+try {
+  gl = new DitherGL(cv);
+  gl.resize(400, 400); // tamanho CSS 400; o buffer ja sai com DPR
+  const img = await loadImage('../assets/sticker-escudo.png');
+  gl.setTexture(img, { premult: true });
+  const fit = () => { const w = Math.min(400, cv.parentElement.clientWidth - 24); gl.resize(w, w); draw(); };
+  addEventListener('resize', fit); fit();
+} catch (e) {
+  console.warn(e.message);
+  $('warn').style.display = 'block';
+  cv.replaceWith(Object.assign(new Image(), { src: '../assets/sticker-escudo.png', width: 300 }));
+}
+
+async function replay() {
+  reveal = 0; draw();
+  await spring(v => { reveal = v; draw(); }, { duration: .9, bounce: .1, steps: 12 });
+}
+for (const id of ['mode', 'pal', 'px']) $(id).addEventListener('input', () => { $('pxv').textContent = $('px').value; draw(); });
+$('replay').addEventListener('click', replay);
+replay();
+</script>
+</body>
+</html>

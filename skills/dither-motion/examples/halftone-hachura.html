@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Halftone, hachura e algoritmos</title>
+<!--
+  DEMONSTRA: a mesma imagem em 6 algoritmos (PNGs gerados por scripts/python/dither_image.py,
+  em assets/generated/) e a hachura ao vivo no shader (modo 'hatch'), com controle do periodo da linha.
+  USA: ../scripts/js/dither-gl.js (DitherGL, loadImage) e ../assets/generated/*.png
+  Regerar: python3 ../scripts/python/dither_image.py ../assets/sticker-encomenda.png out.png --algo halftone --preset cinema --cell 9
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F7FF; color: #0A1A7A; font: 400 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 36px; }
+  h1 { font: 800 26px/1.15 system-ui, sans-serif; margin: 0 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 520px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  figure { margin: 0; background: #fff; padding: 8px; text-align: center; }
+  figure img, figure canvas { width: 100%; height: auto; display: block; image-rendering: pixelated; }
+  figcaption { font-size: 13px; font-weight: 700; padding-top: 6px; }
+  .live { margin-top: 20px; background: #0A1A7A; color: #F5F7FF; padding: 16px; display: grid; gap: 12px; justify-items: center; }
+  .live canvas { width: min(100%, 360px); aspect-ratio: 1; display: block; background: #1235E6; }
+  label { display: grid; gap: 4px; font-size: 13px; width: min(100%, 360px); }
+  input[type=range] { min-height: 44px; width: 100%; }
+  .warn { display: none; color: #FF4F7B; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Halftone, hachura e dither</h1>
+  <div class="grid">
+    <figure><img src="../assets/generated/encomenda-bayer8.png" alt="bayer8"><figcaption>bayer8 · cell 4</figcaption></figure>
+    <figure><img src="../assets/generated/encomenda-floyd.png" alt="floyd"><figcaption>floyd · cell 2</figcaption></figure>
+    <figure><img src="../assets/generated/encomenda-atkinson.png" alt="atkinson"><figcaption>atkinson · cell 2</figcaption></figure>
+    <figure><img src="../assets/generated/encomenda-halftone.png" alt="halftone"><figcaption>halftone · cell 9</figcaption></figure>
+    <figure><img src="../assets/generated/encomenda-hatch.png" alt="hatch"><figcaption>hatch · cell 7</figcaption></figure>
+    <figure><img src="../assets/generated/encomenda-pixel64.png" alt="pixel-grid 64"><figcaption>pixel-grid 64</figcaption></figure>
+  </div>
+  <section class="live">
+    <strong>Hachura ao vivo (shader)</strong>
+    <canvas id="cv" aria-label="Hachura ao vivo"></canvas>
+    <p class="warn" id="warn">WebGL indisponível neste navegador.</p>
+    <label><span>Período da linha: <b id="pv">5</b> px</span>
+      <input id="per" type="range" min="3" max="12" value="5">
+    </label>
+  </section>
+</main>
+
+<script type="module">
+import { DitherGL, loadImage } from '../scripts/js/dither-gl.js';
+const cv = document.getElementById('cv');
+try {
+  const gl = new DitherGL(cv);
+  const size = () => { const w = Math.min(360, cv.parentElement.clientWidth - 32); gl.resize(w, w); draw(); };
+  const img = await loadImage('../assets/sticker-encomenda.png');
+  gl.setTexture(img, { premult: true });
+  // colors: c0 = tinta mais escura, c1 = papel, c2 = linha, c3 = linha nos claros
+  const draw = () => gl.draw({ mode: 'hatch', hatchPer: +document.getElementById('per').value, colors: ['#0A1A7A', '#1235E6', '#7BE8FF', '#F5F7FF'] });
+  document.getElementById('per').addEventListener('input', e => { document.getElementById('pv').textContent = e.target.value; draw(); });
+  addEventListener('resize', size); size();
+} catch (e) { console.warn(e.message); document.getElementById('warn').style.display = 'block'; }
+</script>
+</body>
+</html>
