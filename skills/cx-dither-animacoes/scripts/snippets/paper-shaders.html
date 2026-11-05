@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Shaders: Dithering</title>
+<style>
+  :root { color-scheme: light dark; --c0:#eef0fb; --c3:#1b2766; --page:#f7f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --c0:#090a13; --c3:#f1ecd9; --page:#0c0d16; } }
+  html, body { margin: 0; background: var(--page); }
+  #hero { width: 640px; max-width: 100%; aspect-ratio: 16 / 9; }
+</style>
+</head>
+<body>
+<div id="hero" role="img" aria-label="Esfera em dither Bayer 4x4 animada"></div>
+<script type="module">
+// @paper-design/shaders 0.0.82 (Apache-2.0), versão vanilla. Pinar a versão: a API muda em 0.0.x (aviso do próprio README).
+// O pacote usa duas cores (colorBack/colorFront): ligamos as duas aos tokens. Cuidado: ele pede cor como string (hex/rgb/hsl).
+import { ShaderMount, ditheringFragmentShader, DitheringShapes, DitheringTypes, ShaderFitOptions, getShaderColorFromString }
+  from 'https://cdn.jsdelivr.net/npm/@paper-design/shaders@0.0.82/+esm';
+
+const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+const tokenHex = (name) => {
+  const el = document.body.appendChild(document.createElement('i'));
+  el.style.color = `var(${name})`;
+  probe.canvas.width = probe.canvas.height = 1;
+  probe.fillStyle = '#000'; probe.fillStyle = getComputedStyle(el).color; probe.fillRect(0, 0, 1, 1);
+  el.remove();
+  const d = probe.getImageData(0, 0, 1, 1).data;
+  return '#' + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const mount = new ShaderMount(
+  document.getElementById('hero'),
+  ditheringFragmentShader,
+  {
+    u_colorBack: getShaderColorFromString(tokenHex('--c0')),
+    u_colorFront: getShaderColorFromString(tokenHex('--c3')),
+    u_shape: DitheringShapes.sphere,
+    u_type: DitheringTypes['4x4'],
+    u_pxSize: 3,
+    u_fit: ShaderFitOptions.contain, u_scale: 0.7, u_rotation: 0, u_offsetX: 0, u_offsetY: 0,
+    u_originX: 0.5, u_originY: 0.5, u_worldWidth: 0, u_worldHeight: 0,
+  },
+  undefined,
+  reduced ? 0 : 1,      // speed 0 = parado (nenhum custo recorrente); ele já pausa com aba oculta e fora da tela
+  2000,                 // frame inicial (determinístico)
+  1                     // minPixelRatio
+);
+window.__mount = mount;
+window.__ready = true;
+</script>
+</body>
+</html>

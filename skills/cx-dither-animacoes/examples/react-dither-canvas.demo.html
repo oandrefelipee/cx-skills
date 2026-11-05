@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React · DitherCanvas e ShaderCanvas</title>
+<!-- Gere o JS antes (comando no topo de react-dither-canvas.demo.tsx). -->
+<script>/* tema inicial = esquema do sistema (o seletor da página só demonstra a troca) */
+document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';</script>
+<style>
+/* TOKENS: simulam as variáveis do projeto de destino. */
+:root{--accent:oklch(0.6 0.2 265);--background:oklch(0.15 0.02 270);--foreground:oklch(0.96 0.01 270);color-scheme:dark}
+:root[data-theme="claro"]{--background:oklch(0.975 0.006 270);--foreground:oklch(0.2 0.02 270);color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;padding:24px 16px;background:var(--background);color:var(--foreground);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit}
+[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="./react-dither-canvas.demo.js"></script>
+</body>
+</html>

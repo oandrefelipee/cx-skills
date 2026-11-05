@@ -6,6 +6,7 @@ Skills de agente para Claude Code, Codex, Cursor e outros agentes compatíveis c
 |---|---|
 | [`cx-deploy-pipeline`](skills/cx-deploy-pipeline/SKILL.md) | Leva uma mudança de PR até produção com segurança: lê e tria o CI, trata flaky, mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke e faz rollback. Mantém o host limpo (higiene com teto, CI com Docker rootless, runner multiprojeto). Independe de provedor (adaptador do projeto), com o GitHub como fonte da verdade. Relatório HTML por PR, catálogo de provedores com aprendizados e scripts sem dependência. |
 | [`cx-actionable-ui`](skills/cx-actionable-ui/SKILL.md) | Torna telas de produto orientadas a ação: menos texto, uma ação primária, estado em selo, ajuda em ⓘ. Planeja por blocos e wireframe ASCII antes de escrever, com orçamento de palavras e regras anti-slop. Princípios, 14 leis de UX, 30 técnicas, matriz de tom, bibliografia, guia visual e scripts. |
+| [`cx-dither-animacoes`](skills/cx-dither-animacoes/SKILL.md) | Cria, recria e adapta efeitos em dither, pixel art, halftone e grão, parados ou animados (botão com feixe de luz, fundos de campo, cenas de objetos, 3D leve por SDF, gráficos, celebração, cursor e fonte pixel). Canvas 2D, WebGL2/shader, CSS ou SVG, com cor ligada aos tokens do projeto, movimento reduzido, plano B sem WebGL e prova por captura. 12 snippets de stack, receitas, armadilhas, algoritmos e scripts sem dependência. |
 
 ## Instalar
 
@@ -18,6 +19,7 @@ Só uma skill:
 ```bash
 npx skills add oandrefelipee/cx-skills --skill cx-actionable-ui
 npx skills add oandrefelipee/cx-skills --skill cx-deploy-pipeline
+npx skills add oandrefelipee/cx-skills --skill cx-dither-animacoes
 ```
 
 ## O que vem na `cx-actionable-ui`
@@ -84,6 +86,26 @@ node skills/cx-deploy-pipeline/scripts/checar-links.mjs
 node skills/cx-deploy-pipeline/scripts/redigir.test.mjs
 ```
 
+## O que vem na `cx-dither-animacoes`
+
+Divulgação progressiva: `SKILL.md` com a escolha de stack, a cor padrão, a árvore de decisão, mini workflows (W1 a W10) e a galeria de inspiração; depois a referência do item.
+
+```
+skills/cx-dither-animacoes/
+  SKILL.md                    decisões, árvore de decisão, mini workflows, galeria "escolha na hora", adaptador
+  references/
+    receitas.md               18 receitas com código (botão, campo, cena, SDF, gráfico, celebração, rota, vidro...)
+    algoritmos.md             Bayer, ruído azul, Floyd-Steinberg, Atkinson, halftone, paletas, linear x gama
+    stack-e-libs.md           Canvas2D, WebGL2, ogl/regl/twgl/three/pixi/p5, SVG/CSS, "quero X, use Y"
+    animacao-e-performance.md · acessibilidade-e-reduced-motion.md · prova-e-captura.md
+    armadilhas.md · workflow-referencias.md · adaptador-modelo.md
+  examples/                   botão Brasa/Placa, campo WebGL2, cena de objetos, hook React (HTML único)
+  scripts/                    capture · fps-probe · dither-image · bayer · blue-noise · resolve-tokens ·
+                              frame-stability · shader-playground · 12 snippets de stack (Node, sem dependências)
+```
+
+Teste dos scripts: `node skills/cx-dither-animacoes/scripts/selftest.mjs`.
+
 ## Como contribuir
 
 1. Crie ou edite o `.md` do item em `references/principios/`, `leis/` ou `tecnicas/`, seguindo o formato de um item existente, e ponha o link no `INDEX.md` da pasta. Fontes novas vão em `references/livros.md`.
@@ -105,6 +127,7 @@ As skills são genéricas. Cada projeto pluga as regras próprias num adaptador 
 | Skill | Adaptador | Modelo |
 |---|---|---|
 | `cx-actionable-ui` | `docs/design/ui-acao/README.md` | [`adaptador-modelo.md`](skills/cx-actionable-ui/references/adaptador-modelo.md) |
+| `cx-dither-animacoes` | `.cx/dither/adaptador.md` (ou `docs/design/dither-animacoes/`) | [`adaptador-modelo.md`](skills/cx-dither-animacoes/references/adaptador-modelo.md) |
 | `cx-deploy-pipeline` | `.cx/pipeline/adaptador.json` (ou referência no `AGENTS.md`, ou `docs/deploy/pipeline/`) | [`adaptador-modelo.md`](skills/cx-deploy-pipeline/references/adaptador-modelo.md) |
 
 A pasta `.cx/` na raiz é o lugar comum para os adaptadores de todas as skills `cx-*`.

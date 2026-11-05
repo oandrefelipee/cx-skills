@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>three.js + passe de dither</title>
+<style>
+  :root { color-scheme: light dark; --c0:#eef0fb; --c1:#a9b7f0; --c2:#5a72d4; --c3:#1b2766; --page:#f7f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --c0:#090a13; --c1:#1f2c78; --c2:#5f79e8; --c3:#f1ecd9; --page:#0c0d16; } }
+  html, body { margin: 0; background: var(--page); }
+  canvas { display: block; width: 640px; max-width: 100%; aspect-ratio: 16 / 9; image-rendering: pixelated; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="Nó toroidal 3D em dither Bayer" role="img"></canvas>
+<script type="module">
+// three.js 0.186.1 + EffectComposer. Ordem dos passes: RenderPass -> OutputPass (tone mapping + sRGB) -> dither (em espaço de tela, já sRGB).
+// Renderiza em 1 pixel por célula (setSize pequeno) e o CSS amplia com image-rendering: pixelated.
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+const token = (name) => {
+  const el = document.body.appendChild(document.createElement('i'));
+  el.style.color = `var(${name})`;
+  probe.canvas.width = probe.canvas.height = 1;
+  probe.fillStyle = '#000'; probe.fillStyle = getComputedStyle(el).color; probe.fillRect(0, 0, 1, 1);
+  el.remove();
+  return new THREE.Vector3(...[...probe.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((v) => v / 255));
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const W = 160, H = 90;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);                         // false: não mexe no tamanho CSS
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 50);
+camera.position.set(0, 0, 6);
+const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(1.1, 0.38, 128, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }));
+scene.add(knot, new THREE.AmbientLight(0xffffff, 0.35));
+const sun = new THREE.DirectionalLight(0xffffff, 3.2); sun.position.set(3, 4, 5); scene.add(sun);
+
+const ditherShader = {
+  uniforms: { tDiffuse: { value: null }, uC0: { value: token('--c0') }, uC1: { value: token('--c1') }, uC2: { value: token('--c2') }, uC3: { value: token('--c3') } },
+  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform vec3 uC0, uC1, uC2, uC3; varying vec2 vUv;
+    float bayer8(vec2 c) {
+      vec2 q = mod(floor(c), 8.0); float v = 0.0;
+      { float x = floor(q.x / 4.0), y = floor(q.y / 4.0); v += (2.0*x + 3.0*y - 4.0*x*y); }
+      { float x = mod(floor(q.x / 2.0), 2.0), y = mod(floor(q.y / 2.0), 2.0); v += (2.0*x + 3.0*y - 4.0*x*y) * 4.0; }
+      { float x = mod(q.x, 2.0), y = mod(q.y, 2.0); v += (2.0*x + 3.0*y - 4.0*x*y) * 16.0; }
+      return (v + 0.5) / 64.0;
+    }
+    void main() {
+      float lum = dot(texture2D(tDiffuse, vUv).rgb, vec3(0.2126, 0.7152, 0.0722));
+      float q = clamp(floor(lum * 3.0 + bayer8(gl_FragCoord.xy)), 0.0, 3.0);
+      gl_FragColor = vec4(q < 0.5 ? uC0 : q < 1.5 ? uC1 : q < 2.5 ? uC2 : uC3, 1.0);
+    }`,
+};
+const composer = new EffectComposer(renderer);
+composer.setPixelRatio(1);
+composer.setSize(W, H);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new OutputPass());
+composer.addPass(new ShaderPass(ditherShader));
+
+const draw = (t) => { knot.rotation.set(t * 0.4, t * 0.6, 0); composer.render(); };
+draw(2);
+if (!reduced) renderer.setAnimationLoop((ms) => { if (!document.hidden) draw(ms / 1000); });
+window.__ready = true;
+</script>
+</body>
+</html>

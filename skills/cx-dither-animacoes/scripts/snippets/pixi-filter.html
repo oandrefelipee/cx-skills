@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PixiJS + filtro de dither</title>
+<style>
+  :root { color-scheme: light dark; --c0:#eef0fb; --c1:#a9b7f0; --c2:#5a72d4; --c3:#1b2766; --page:#f7f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --c0:#090a13; --c1:#1f2c78; --c2:#5f79e8; --c3:#f1ecd9; --page:#0c0d16; } }
+  html, body { margin: 0; background: var(--page); }
+  canvas { display: block; width: 640px; max-width: 100%; aspect-ratio: 16 / 9; image-rendering: pixelated; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js"></script>
+</head>
+<body>
+<canvas id="c" aria-label="Esfera iluminada em dither Bayer" role="img"></canvas>
+<script>
+// PixiJS 8.22.0: um Filter com fragment shader próprio quantiza a luminância do que estiver no container.
+// Resolução 1:1 com a célula (canvas pequeno) e CSS pixelated. API v8: Filter({ glProgram, resources }).
+const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+const token = (name) => {
+  const el = document.body.appendChild(document.createElement('i'));
+  el.style.color = `var(${name})`;
+  probe.canvas.width = probe.canvas.height = 1;
+  probe.fillStyle = '#000'; probe.fillStyle = getComputedStyle(el).color; probe.fillRect(0, 0, 1, 1);
+  el.remove();
+  return new Float32Array([...probe.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((v) => v / 255));
+};
+(async () => {
+  const W = 160, H = 90;
+  const app = new PIXI.Application();
+  await app.init({ canvas: document.getElementById('c'), width: W, height: H, resolution: 1, antialias: false, background: '#000000' });
+
+  // conteúdo: esfera com gradiente radial, desenhada num canvas 2D e usada como textura
+  const src = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  const g = src.getContext('2d');
+  const grad = g.createRadialGradient(W * 0.4, H * 0.35, 4, W * 0.5, H * 0.5, 44);
+  grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#000');
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.fillStyle = grad; g.beginPath(); g.arc(W / 2, H / 2, 40, 0, 7); g.fill();
+  const sprite = new PIXI.Sprite(PIXI.Texture.from(src));
+  app.stage.addChild(sprite);
+
+  const vertex = `in vec2 aPosition; out vec2 vTextureCoord;
+uniform vec4 uInputSize; uniform vec4 uOutputFrame; uniform vec4 uOutputTexture;
+void main() {
+  vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+  position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
+  position.y = position.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
+  gl_Position = vec4(position, 0.0, 1.0);
+  vTextureCoord = aPosition * (uOutputFrame.zw * uInputSize.zw);
+}`;
+  const fragment = `precision highp float;   // sem isto o Pixi injeta mediump e o link falha: 'Precisions of uniform uInputSize differ between VERTEX and FRAGMENT'
+in vec2 vTextureCoord; out vec4 finalColor;
+uniform sampler2D uTexture; uniform vec4 uInputSize; uniform vec3 uC0, uC1, uC2, uC3;
+float bayer8(vec2 c) {
+  vec2 q = mod(floor(c), 8.0); float v = 0.0;
+  { float x = floor(q.x / 4.0), y = floor(q.y / 4.0); v += (2.0*x + 3.0*y - 4.0*x*y); }
+  { float x = mod(floor(q.x / 2.0), 2.0), y = mod(floor(q.y / 2.0), 2.0); v += (2.0*x + 3.0*y - 4.0*x*y) * 4.0; }
+  { float x = mod(q.x, 2.0), y = mod(q.y, 2.0); v += (2.0*x + 3.0*y - 4.0*x*y) * 16.0; }
+  return (v + 0.5) / 64.0;
+}
+void main() {
+  float lum = dot(texture(uTexture, vTextureCoord).rgb, vec3(0.2126, 0.7152, 0.0722));
+  float q = clamp(floor(lum * 3.0 + bayer8(vTextureCoord * uInputSize.xy)), 0.0, 3.0);
+  finalColor = vec4(q < 0.5 ? uC0 : q < 1.5 ? uC1 : q < 2.5 ? uC2 : uC3, 1.0);
+}`;
+  sprite.filters = [new PIXI.Filter({
+    glProgram: new PIXI.GlProgram({ vertex, fragment }),
+    resources: { ditherUniforms: {
+      uC0: { value: token('--c0'), type: 'vec3<f32>' }, uC1: { value: token('--c1'), type: 'vec3<f32>' },
+      uC2: { value: token('--c2'), type: 'vec3<f32>' }, uC3: { value: token('--c3'), type: 'vec3<f32>' },
+    } },
+  })];
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

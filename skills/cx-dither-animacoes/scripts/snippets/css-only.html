@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dither só com CSS</title>
+<style>
+  :root { color-scheme: light dark; --page:#f7f7fb; --ink:#14172b; }
+  @media (prefers-color-scheme: dark) { :root { --page:#0c0d16; --ink:#e9ebf8; } }
+  html, body { margin: 0; background: var(--page); color: var(--ink); font: 14px system-ui, sans-serif; }
+  main { padding: 16px; display: grid; gap: 12px; max-width: 640px; }
+  .box { height: 120px; border: 1px solid currentColor; overflow: hidden; }
+  /* 1) Bayer 8x8 em CSS (receita gerada por: node bayer.mjs 8 --format css) */
+/* Dither Bayer 8x8 só com CSS (testado no Chromium 153; suporte a mix-blend-mode: plus-lighter em Safari e Firefox não foi verificado aqui, confira no MDN/caniuse).
+   Ideia: soma-se a imagem (luminância L em 0..0.5) com o tile (1 - t)/2 e corta-se em 0.5 com contrast():
+   0.5·L + 0.5·(1 - t) >= 0.5  <=>  L >= t, que é exatamente o teste do dither ordenado.
+   Limites: a imagem precisa ser cinza e ir só até #808080; o corte é 1 bit (preto/branco); para tons e cor use shader/canvas. */
+:root { --bayer-8: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAAAAADhZOFXAAAAUElEQVR42mOot8/Xr7bO1maQj+f3l47m9mZIVy83T1YuNmZgdxcPZ3YWDmaotMzUrLXN1WWQjOT0lI3l9WVIVCw0TFUtNWVgdBQMZHUVDQUAX+YQAevUYt8AAAAASUVORK5CYII="); }
+.dither-bayer {
+  --cell: 3px;                                   /* tamanho da célula */
+  position: relative; isolation: isolate;
+  background: linear-gradient(90deg, #000, #808080);   /* troque pela sua luminância (0..50% de cinza) */
+  filter: contrast(1000);                        /* corte duro em 50% */
+}
+.dither-bayer::before {
+  content: ""; position: absolute; inset: 0;
+  background: var(--bayer-8) 0 0 / calc(8 * var(--cell)) calc(8 * var(--cell));
+  image-rendering: pixelated;                    /* amplia o tile sem suavizar */
+  mix-blend-mode: plus-lighter;
+}
+  /* 2) Halftone em CSS: pontos cuja raio cresce com o escuro. Mesma ideia: soma de duas camadas em 0..50% de cinza + contrast(). */
+  .halftone { --pitch: 12px; position: relative; isolation: isolate; overflow: hidden;
+    background: linear-gradient(90deg, #000, #808080); filter: contrast(1000); }
+  .halftone::before { content: ""; position: absolute; inset: -50%; transform: rotate(45deg);
+    background: radial-gradient(circle farthest-corner, #000, #808080) 0 0 / var(--pitch) var(--pitch);
+    mix-blend-mode: plus-lighter; }
+  .gradient-ref { background: linear-gradient(90deg, #000, #fff); }
+</style>
+</head>
+<body>
+<main>
+  <div class="box gradient-ref" role="img" aria-label="Referência: gradiente contínuo de preto a branco"></div>
+  <div class="box dither-bayer" role="img" aria-label="O mesmo gradiente em dither Bayer 8x8, só com CSS"></div>
+  <div class="box halftone" role="img" aria-label="O mesmo gradiente em halftone rotacionado a 45 graus, só com CSS"></div>
+</main>
+<script>window.__ready = true;</script>
+</body>
+</html>

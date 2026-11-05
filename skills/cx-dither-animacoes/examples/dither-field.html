@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campo de dither em WebGL2</title>
+<!--
+  EXEMPLO 2 · Fundo de campo em dither (WebGL2, um fragment shader, sem libs). Abra o arquivo no navegador.
+
+  O que mostra (receita "fundo de campo com 4 tons" de references/receitas.md):
+    - UM canvas na resolução da CÉLULA (1 pixel do canvas = 1 célula de dither), ampliado com image-rendering: pixelated.
+      Isso é o truque de desempenho: o shader roda 4 a 9 vezes menos pixels e as células saem exatas;
+    - o campo (luminância 0..1) vira 4 tons por limiar Bayer 8x8: tom = floor(lum*3 + bayer);
+    - os 4 tons vêm de variáveis CSS (--p1..--p4, derivadas de --accent por color-mix), lidas por uma sonda
+      getComputedStyle e convertidas em RGB; trocar tema/cor no <html> relê tudo;
+    - 3 modos: maré (campo suave), ondas (faixas), chuva (fios de 1 célula);
+    - prefers-reduced-motion = um quadro parado; pausa com aba oculta e fora da tela; teto de FPS; sem WebGL2 = gradiente CSS.
+-->
+<script>/* tema inicial = esquema do sistema (o seletor da página só demonstra a troca) */
+document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';</script>
+<style>
+/* ───────── TOKENS: simulam as variáveis do projeto de destino. No app real, apague este bloco. ───────── */
+:root{
+  --accent: oklch(0.6 0.2 265);
+  --background: oklch(0.15 0.02 270);
+  --foreground: oklch(0.96 0.01 270);
+  color-scheme: dark;
+}
+:root[data-theme="claro"]{
+  --background: oklch(0.975 0.006 270);
+  --foreground: oklch(0.2 0.02 270);
+  color-scheme: light;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px 16px 40px}
+main{width:min(100%,760px);margin:0 auto;display:grid;gap:18px}
+h1{font-size:18px;margin:0}
+.controles{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px}
+.controles label{display:inline-flex;gap:6px;align-items:center}
+.controles button,.controles select{font:inherit;font-size:13px;padding:5px 10px;border-radius:9px;cursor:pointer;
+  border:1px solid color-mix(in oklab,var(--foreground) 25%,transparent);background:transparent;color:var(--foreground)}
+.controles button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+.amostra{width:20px;height:20px;border-radius:50%;padding:0 !important;border:2px solid var(--background) !important}
+.hud{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:color-mix(in oklab,var(--foreground) 65%,var(--background))}
+
+/* ───────── O CAMPO (copie daqui) ───────── */
+.campo{
+  /* 4 tons, do FUNDO para o DESTAQUE. No escuro o destaque clareia; no claro ele escurece. */
+  --p1: color-mix(in oklab, var(--accent) 20%, var(--background));
+  --p2: color-mix(in oklab, var(--accent) 50%, var(--background));
+  --p3: var(--accent);
+  --p4: color-mix(in oklab, var(--accent) 50%, white);
+  position:relative;overflow:hidden;border-radius:20px;min-height:340px;display:grid;place-items:center;
+  background:linear-gradient(110deg,var(--p1),var(--p2)); /* reserva se não houver WebGL2 */
+}
+:root[data-theme="claro"] .campo{ --p4: color-mix(in oklab, var(--accent) 55%, black); }
+.campo canvas{position:absolute;left:0;top:0;image-rendering:pixelated;display:block}
+.campo .conteudo{position:relative;padding:14px 18px;border-radius:14px;text-align:center;max-width:80%;
+  background:color-mix(in oklab,var(--background) 80%,transparent);backdrop-filter:blur(6px)}
+.campo .conteudo strong{display:block;font-size:22px}
+.campo .conteudo span{font-size:14px;color:color-mix(in oklab,var(--foreground) 75%,var(--background))}
+</style>
+</head>
+<body>
+<main>
+  <h1>Campo de dither em WebGL2</h1>
+  <div class="controles" id="barra">
+    <span>Modo:</span><span id="modos"></span>
+    <label>Célula <select id="celula"><option>2</option><option selected>3</option><option>4</option><option>6</option></select> px</label>
+    <label>Nível <input id="nivel" type="range" min="0" max="1" step="0.01" value="0.6"></label>
+    <label>Alcance <input id="alcance" type="range" min="0" max="1" step="0.01" value="0.85"></label>
+  </div>
+  <div class="controles"><span>Cor:</span><span id="cores" style="display:inline-flex;gap:8px"></span><span>Tema:</span><span id="temas" style="display:inline-flex;gap:6px"></span></div>
+
+  <section class="campo" id="campo" aria-label="Fundo decorativo animado">
+    <canvas aria-hidden="true"></canvas>
+    <div class="conteudo"><strong>Saldo pronto para usar</strong><span>O texto fica num painel; o campo é só decoração (aria-hidden).</span></div>
+  </section>
+  <div class="hud" id="hud" aria-live="off"></div>
+</main>
+
+<script>
+/* ───────── criarCampo (copie daqui) ───────── */
+const VERT = `#version 300 es
+void main(){ vec2 p = vec2((gl_VertexID<<1)&2, gl_VertexID&2); gl_Position = vec4(p*2.-1., 0., 1.); }`;   // triângulo de tela cheia, sem buffer
+
+const FRAG = `#version 300 es
+precision highp float;
+uniform vec2 uRes;                 // tamanho em CÉLULAS
+uniform float uTime, uLevel, uReach;
+uniform int uMode;                 // 0 maré, 1 ondas, 2 chuva
+uniform vec3 uP[4];                // os 4 tons (RGB 0..1), do fundo ao destaque
+out vec4 outColor;
+
+// Bayer 8x8 sem textura: soma ponderada de 3 níveis de 2x2 (a mesma matriz recursiva do Dither Kit).
+float add4(float xb, float yb){ return 2.0*xb + 3.0*yb - 4.0*xb*yb; }
+float bayer8(vec2 c){
+  vec2 q = mod(floor(c), 8.0);
+  float b0x = mod(q.x,2.0),           b0y = mod(q.y,2.0);
+  float b1x = mod(floor(q.x/2.0),2.0), b1y = mod(floor(q.y/2.0),2.0);
+  float b2x = floor(q.x/4.0),          b2y = floor(q.y/4.0);
+  return (add4(b2x,b2y) + 4.0*add4(b1x,b1y) + 16.0*add4(b0x,b0y) + 0.5) / 64.0;
+}
+float h1(float n){ return fract(sin(n*12.9898 + 4.1414) * 43758.5453); }
+
+void main(){
+  vec2 cell = floor(gl_FragCoord.xy);            // coordenada da célula (origem embaixo à esquerda)
+  vec2 uv = (cell + 0.5) / uRes;                 // 0..1
+  float asp = uRes.x / uRes.y;
+  vec2 q = vec2(uv.x * asp, uv.y);               // espaço independente da resolução
+  float t = uTime, lum;
+
+  if (uMode == 0) {                              // MARÉ: campo suave que só acende até 'uReach'
+    float f = 0.5 + 0.25*sin(q.x*3.8 + t*0.55) + 0.25*sin(q.y*9.0 - t*0.45 + q.x*2.2);
+    float lit = smoothstep(uReach + 0.06, uReach - 0.18, uv.x);
+    lum = f * (0.1 + 0.9*lit) * (0.55 + 0.6*uLevel);
+    lum *= 1.0 - 0.35*pow(abs(uv.x - 0.5)*2.0, 3.0);          // vinheta nas laterais
+  } else if (uMode == 1) {                       // ONDAS: faixas lentas, azul "cheio"
+    float s = 0.5 + 0.24*sin(q.x*3.0 + t*0.5 + sin(q.y*4.2 + t*0.36)*1.1) + 0.2*sin(q.y*5.0 - t*0.42 + q.x*1.4);
+    lum = (0.24 + 0.55*clamp(s,0.,1.)) * (0.7 + 0.3*uLevel);
+  } else {                                       // CHUVA: fios de 1 célula sobre uma névoa baixa
+    float rows = uRes.y;
+    float cy = rows - 1.0 - cell.y;              // linha contada a partir do topo
+    float haze = 0.10 + 0.25*smoothstep(0.3, 1.1, 1.0 - uv.y + 0.2*sin(q.x*4.0 + t*0.3));
+    lum = haze * (0.6 + 0.6*uLevel);
+    float lane = cell.x;
+    if (h1(lane) < 0.12) {
+      float sp  = 8.0 + 10.0*h1(lane + 3.1);                     // células por segundo
+      float len = 6.0 + 12.0*h1(lane + 7.7);
+      float per = rows*0.9 + len + 20.0 + 60.0*h1(lane + 1.3);
+      float dy  = mod(t*sp + h1(lane + 9.9)*per, per) - cy;      // distância atrás da "cabeça" do fio
+      if (dy >= 0.0 && dy < len) lum = max(lum, (1.0 - dy/len) * (0.7 + 0.3*uLevel));
+    }
+  }
+
+  // Quantização: lum (0..1) vira 4 tons; o limiar Bayer decide qual dos dois tons vizinhos cada célula usa.
+  float l = clamp(lum, 0.0, 1.0)*3.0 + bayer8(cell);
+  int ix = clamp(int(floor(l)), 0, 3);
+  outColor = vec4(uP[ix], 1.0);
+}`;
+
+/** [r,g,b] 0..1 de qualquer cor CSS (var, color-mix, oklch). Sonda sem transição, dentro do elemento (herda as variáveis). */
+let _cv;
+function rgbDe(el, css) {
+  const s = document.createElement('span');
+  s.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;transition:none;animation:none;color:' + css;
+  el.appendChild(s);
+  const calc = getComputedStyle(s).color; s.remove();
+  _cv ||= document.createElement('canvas'); _cv.width = _cv.height = 1;
+  const x = _cv.getContext('2d', { willReadFrequently: true });
+  x.clearRect(0, 0, 1, 1); x.fillStyle = '#000'; x.fillStyle = calc; x.fillRect(0, 0, 1, 1);
+  const d = x.getImageData(0, 0, 1, 1).data;
+  return [d[0] / 255, d[1] / 255, d[2] / 255];
+}
+
+function criarCampo(host, cv, { celula = 3, fps = 24, modo = 0, nivel = 0.6, alcance = 0.85, aoQuadro } = {}) {
+  const gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'low-power' });
+  if (!gl) { host.dataset.semWebgl = 'true'; return null; }                  // o gradiente CSS de reserva aparece
+  const compila = (tipo, src) => {
+    const s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compila(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compila(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const U = n => gl.getUniformLocation(prog, n);
+  const uRes = U('uRes'), uTime = U('uTime'), uLevel = U('uLevel'), uReach = U('uReach'), uMode = U('uMode'), uP = U('uP[0]');
+
+  const reduzido = matchMedia('(prefers-reduced-motion: reduce)');
+  const est = { celula, fps, modo, nivel, alcance, vivoNivel: nivel, vivoAlcance: alcance, cols: 1, rows: 1 };
+  let tons = new Float32Array(12), raf = 0, ultimo = 0, visivel = true, quadros = 0;
+
+  function lerTons() { tons = new Float32Array([1, 2, 3, 4].flatMap(i => rgbDe(host, `var(--p${i})`))); }
+
+  function medir() {
+    // Célula em px do DISPOSITIVO tem que ser inteira, senão o pixelated gera células de tamanhos diferentes.
+    const dpr = window.devicePixelRatio || 1;
+    const celDev = Math.max(1, Math.round(est.celula * dpr));
+    est.cols = Math.max(1, Math.ceil(host.clientWidth * dpr / celDev));
+    est.rows = Math.max(1, Math.ceil(host.clientHeight * dpr / celDev));
+    cv.width = est.cols; cv.height = est.rows;                               // resolução interna = nº de células
+    cv.style.width = (est.cols * celDev / dpr) + 'px';                        // passa um pouco das bordas; o host corta
+    cv.style.height = (est.rows * celDev / dpr) + 'px';
+    gl.viewport(0, 0, est.cols, est.rows);
+  }
+
+  function desenhar(t) {
+    gl.uniform2f(uRes, est.cols, est.rows);
+    gl.uniform1f(uTime, t);
+    gl.uniform1f(uLevel, est.vivoNivel);
+    gl.uniform1f(uReach, est.vivoAlcance);
+    gl.uniform1i(uMode, est.modo);
+    gl.uniform3fv(uP, tons);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  function passo(agora) {
+    raf = requestAnimationFrame(passo);
+    if (document.hidden || !visivel || agora - ultimo < 1000 / est.fps) return;   // pausa + teto de FPS
+    ultimo = agora; quadros++;
+    est.vivoNivel += (est.nivel - est.vivoNivel) * 0.08;                          // suaviza mudanças de valor
+    est.vivoAlcance += (est.alcance - est.vivoAlcance) * 0.08;
+    desenhar(agora / 1000);
+    aoQuadro && aoQuadro(quadros);
+  }
+  function iniciar() {
+    cancelAnimationFrame(raf);
+    if (reduzido.matches) { est.vivoNivel = est.nivel; est.vivoAlcance = est.alcance; desenhar(3.3); return; }
+    raf = requestAnimationFrame(passo);
+  }
+
+  const ro = new ResizeObserver(() => { medir(); if (reduzido.matches) desenhar(3.3); }); ro.observe(host);
+  const io = new IntersectionObserver(([e]) => { visivel = e.isIntersecting; }); io.observe(host);
+  const mo = new MutationObserver(() => { lerTons(); if (reduzido.matches) desenhar(3.3); });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
+  document.addEventListener('visibilitychange', iniciar);
+  reduzido.addEventListener('change', iniciar);
+
+  lerTons(); medir(); iniciar();
+  return {
+    set(p) { Object.assign(est, p); if (p.celula) medir(); if (reduzido.matches) { est.vivoNivel = est.nivel; est.vivoAlcance = est.alcance; desenhar(3.3); } },
+    estado: est, quadros: () => quadros,
+    destroy() { cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); mo.disconnect(); document.removeEventListener('visibilitychange', iniciar); gl.getExtension('WEBGL_lose_context')?.loseContext(); },
+  };
+}
+
+/* ───────── Demonstração ───────── */
+const host = document.getElementById('campo');
+const campo = criarCampo(host, host.querySelector('canvas'));
+const hud = document.getElementById('hud');
+if (!campo) hud.textContent = 'Sem WebGL2 neste navegador: o gradiente CSS de reserva está aparecendo (isso é o comportamento esperado).';
+else {
+  let k0 = performance.now(), q0 = 0;
+  setInterval(() => {
+    const agora = performance.now(), q = campo.quadros();
+    const fps = ((q - q0) * 1000 / (agora - k0)).toFixed(0);
+    hud.textContent = `grade ${campo.estado.cols}×${campo.estado.rows} células (${campo.estado.cols * campo.estado.rows} fragmentos) · ${fps} quadros/s desenhados · célula ${campo.estado.celula}px de CSS`;
+    k0 = agora; q0 = q;
+  }, 1000);
+
+  const modos = document.getElementById('modos');
+  ['Maré', 'Ondas', 'Chuva'].forEach((nome, i) => {
+    const b = document.createElement('button'); b.textContent = nome; b.setAttribute('aria-pressed', i === 0);
+    b.onclick = () => { campo.set({ modo: i }); [...modos.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+    modos.append(b);
+  });
+  document.getElementById('celula').onchange = e => campo.set({ celula: +e.target.value });
+  document.getElementById('nivel').oninput = e => campo.set({ nivel: +e.target.value });
+  document.getElementById('alcance').oninput = e => campo.set({ alcance: +e.target.value });
+}
+const CORES = [['Azul', 'oklch(0.6 0.2 265)'], ['Lima', 'oklch(0.84 0.19 125)'], ['Laranja', 'oklch(0.75 0.18 50)'], ['Menta', 'oklch(0.8 0.13 170)'], ['Rosa', 'oklch(0.68 0.22 350)']];
+const cores = document.getElementById('cores');
+CORES.forEach(([nome, v], i) => {
+  const b = document.createElement('button'); b.className = 'amostra'; b.title = nome; b.setAttribute('aria-label', 'Cor ' + nome);
+  b.style.background = v; b.setAttribute('aria-pressed', i === 0);
+  b.onclick = () => { document.documentElement.style.setProperty('--accent', v); [...cores.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+  cores.append(b);
+});
+const temas = document.getElementById('temas');
+['escuro', 'claro'].forEach((t, i) => {
+  const b = document.createElement('button'); b.textContent = t[0].toUpperCase() + t.slice(1); b.setAttribute('aria-pressed', document.documentElement.dataset.theme === t);
+  b.onclick = () => { document.documentElement.dataset.theme = t; [...temas.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+  temas.append(b);
+});
+</script>
+</body>
+</html>

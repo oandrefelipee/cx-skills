@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>p5.js + Bayer</title>
+<style>
+  :root { color-scheme: light dark; --c0:#eef0fb; --c1:#a9b7f0; --c2:#5a72d4; --c3:#1b2766; --page:#f7f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --c0:#090a13; --c1:#1f2c78; --c2:#5f79e8; --c3:#f1ecd9; --page:#0c0d16; } }
+  html, body { margin: 0; background: var(--page); }
+  canvas { display: block; width: 640px !important; height: auto !important; max-width: 100%; image-rendering: pixelated; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@2.3.4/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// p5.js 2.3.4, modo instância. Canvas de 160x90 (1 pixel = 1 célula), pixels escritos à mão com loadPixels/updatePixels.
+const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+const token = (name) => {
+  const el = document.body.appendChild(document.createElement('i'));
+  el.style.color = `var(${name})`;
+  probe.canvas.width = probe.canvas.height = 1;
+  probe.fillStyle = '#000'; probe.fillStyle = getComputedStyle(el).color; probe.fillRect(0, 0, 1, 1);
+  el.remove();
+  return [...probe.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const bayer = (x, y) => { let v = 0; for (let b = 0; b < 3; b++) { const bit = 2 - b, xb = (x >> bit) & 1, yb = (y >> bit) & 1; v += (2*xb + 3*yb - 4*xb*yb) * 4 ** b; } return (v + 0.5) / 64; };
+
+new p5((p) => {
+  let tones;
+  p.setup = () => {
+    const c = p.createCanvas(160, 90); c.elt.setAttribute('role', 'img'); c.elt.setAttribute('aria-label', 'Campo de ondas em dither Bayer');
+    p.pixelDensity(1); p.noSmooth();
+    tones = [0, 1, 2, 3].map((i) => token(`--c${i}`));
+    if (reduced) p.noLoop();
+    window.__ready = true;
+  };
+  p.draw = () => {
+    const t = reduced ? 2 : p.millis() / 1000;
+    p.loadPixels();
+    for (let y = 0; y < p.height; y++) for (let x = 0; x < p.width; x++) {
+      const u = x / p.width, v = y / p.height;
+      const f = 0.5 + 0.25 * Math.sin(u * 7 + t * 0.55) + 0.25 * Math.sin(v * 9 - t * 0.45 + u * 3);
+      const q = Math.min(3, Math.floor(f * 3 + bayer(x & 7, y & 7)));
+      const i = 4 * (y * p.width + x);
+      p.pixels[i] = tones[q][0]; p.pixels[i + 1] = tones[q][1]; p.pixels[i + 2] = tones[q][2]; p.pixels[i + 3] = 255;
+    }
+    p.updatePixels();
+  };
+});
+</script>
+</body>
+</html>

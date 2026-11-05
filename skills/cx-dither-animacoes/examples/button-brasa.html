@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Botão Brasa e Placa em dither</title>
+<!--
+  EXEMPLO 1 · Botão em dither com feixe de luz (Canvas 2D, sem libs). Abra o arquivo no navegador.
+
+  O que mostra (receita "botão brasa/placa" de references/receitas.md):
+    - campo de dither Bayer 8x8 desenhado num <canvas> minúsculo (1 célula = 2 px de CSS), ampliado sem suavização;
+    - cor SEMPRE vinda de variáveis CSS (aqui --accent), resolvida por uma sonda getComputedStyle (funciona com
+      color-mix e oklch, que o canvas não entende sozinho se vierem como var());
+    - feixe de luz: ponto com `offset-path: rect()` correndo por um anel 1px (máscara "exclude") + cópia borrada = brilho;
+    - acende ao passar o mouse, focar ou apertar; prefers-reduced-motion = quadro parado; pausa com aba oculta/fora da tela;
+    - texto com contraste calculado (branco ou escuro, o que passar melhor) sobre a cor cheia da Placa.
+
+  Para usar no seu projeto: troque o bloco "TOKENS" pelos nomes reais do app (basta existir --accent) e copie
+  o CSS .dz-*, o HTML do botão e a função DitherBotao.
+-->
+<script>/* tema inicial = esquema do sistema (o seletor da página só demonstra a troca) */
+document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';</script>
+<style>
+/* ───────── TOKENS: este bloco simula as variáveis do projeto de destino. No app real, apague-o. ───────── */
+:root{
+  --accent: oklch(0.84 0.19 125);        /* cor de marca (lima) */
+  --background: oklch(0.15 0.02 270);
+  --foreground: oklch(0.96 0.01 270);
+  color-scheme: dark;
+}
+:root[data-theme="claro"]{
+  --background: oklch(0.975 0.006 270);
+  --foreground: oklch(0.2 0.02 270);
+  color-scheme: light;
+}
+
+/* ───────── Página de demonstração ───────── */
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--background);color:var(--foreground);
+  font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;padding:24px 16px}
+main{width:min(100%,460px);display:grid;gap:28px}
+h1{font-size:18px;margin:0 0 4px}
+p.nota{margin:0;color:color-mix(in oklab,var(--foreground) 70%,var(--background));font-size:14px}
+.controles{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controles button{font:inherit;font-size:13px;padding:6px 10px;border-radius:10px;cursor:pointer;
+  border:1px solid color-mix(in oklab,var(--foreground) 25%,transparent);
+  background:transparent;color:var(--foreground)}
+.controles button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+.amostra{width:22px;height:22px;border-radius:50%;padding:0 !important;border:2px solid var(--background) !important}
+.linha{display:grid;gap:10px}
+.rotulo{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in oklab,var(--foreground) 60%,var(--background))}
+
+/* ───────── O BOTÃO (copie daqui) ───────── */
+.dz-botao{
+  --dz-cor: var(--accent);
+  --dz-claro: color-mix(in oklab, var(--dz-cor) 40%, white);
+  --dz-sombra: color-mix(in oklab, var(--dz-cor) 52%, black);
+  --dz-brasa-fundo: color-mix(in oklab, var(--dz-cor) 9%, black);
+  --dz-texto: white; /* o JS troca por branco/escuro conforme o contraste */
+  position:relative;
+}
+.dz-btn{
+  position:relative;isolation:isolate;overflow:hidden;width:100%;height:48px;border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;border-radius:16px;
+  font:600 16px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em;color:var(--dz-texto);
+  transition:box-shadow .4s ease, transform .15s ease;
+}
+.dz-botao[data-variante="brasa"] .dz-btn{
+  background:var(--dz-brasa-fundo);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab,var(--dz-cor) 35%,transparent), 0 6px 22px -12px var(--dz-cor);
+  text-shadow: 0 0 14px color-mix(in oklab,var(--dz-cor) 70%,transparent);
+}
+.dz-botao[data-variante="placa"] .dz-btn{
+  background:var(--dz-cor);
+  box-shadow: inset 0 1px 0 rgb(255 255 255/.35), 0 6px 22px -12px var(--dz-cor);
+  /* halo da própria cor: limpa a trama escura atrás das letras (texto sobre dither perde contraste sem isso) */
+  text-shadow: 0 0 7px var(--dz-cor), 0 0 3px var(--dz-cor), 0 0 1px var(--dz-cor);
+}
+.dz-botao[data-aceso="true"] .dz-btn{ box-shadow:
+  inset 0 0 0 1px color-mix(in oklab,var(--dz-cor) 55%,transparent), 0 10px 32px -12px var(--dz-cor); }
+.dz-btn:active{ transform:scale(.975) }
+.dz-btn:focus-visible{ outline:2px solid var(--dz-claro); outline-offset:3px }
+.dz-campo{position:absolute;inset:0;z-index:-1;width:100%;height:100%;image-rendering:pixelated}
+.dz-conteudo{display:inline-flex;align-items:center;gap:10px}
+
+/* Feixe: anel de 1px (máscara que exclui o miolo) com um ponto de luz que corre por offset-path. */
+@keyframes dz-corre { from{offset-distance:0%} to{offset-distance:100%} }
+.dz-feixe{position:absolute;inset:-1px;border:1px solid transparent;border-radius:17px;pointer-events:none;
+  -webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  --b1:white; --b2:var(--dz-claro)}
+.dz-feixe.dz-brilho{inset:-3px;border-width:3px;border-radius:19px;filter:blur(4px);--b1:var(--dz-claro);--b2:var(--dz-cor)}
+.dz-ponto{position:absolute;aspect-ratio:1;width:var(--w,58px);
+  offset-path:rect(0 auto auto 0 round 16px);
+  animation:dz-corre var(--dur,5.5s) linear infinite;animation-delay:var(--d,0s);
+  background:linear-gradient(to left,var(--b1),var(--b2) 35%,transparent 80%);
+  opacity:var(--o,.55);transition:width .45s cubic-bezier(.2,.8,.2,1),opacity .45s ease}
+.dz-ponto + .dz-ponto{--d:-2.75s}
+.dz-botao[data-aceso="true"] .dz-ponto{--w:92px;--o:1}
+.dz-botao[data-aceso="true"] .dz-brilho .dz-ponto{--w:110px}
+/* Navegador sem offset-path: rect(): some o feixe, o botão continua inteiro. */
+@supports not (offset-path: rect(0 auto auto 0 round 16px)){ .dz-feixe{display:none} }
+@media (prefers-reduced-motion: reduce){
+  .dz-ponto{animation:none;offset-distance:14%}
+  .dz-btn{transition:none}
+  .dz-btn:active{transform:none}
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Botão em dither com feixe de luz</h1>
+    <p class="nota">Passe o mouse, use Tab ou toque: o feixe cresce e as brasas sobem. A cor vem de <code>--accent</code>; troque abaixo e o canvas acompanha.</p>
+  </header>
+
+  <section class="linha" aria-label="Controles">
+    <div class="rotulo">Cor (muda --accent)</div>
+    <div class="controles" id="cores"></div>
+    <div class="rotulo">Tema (muda --background / --foreground)</div>
+    <div class="controles" id="temas"></div>
+  </section>
+
+  <section class="linha">
+    <div class="rotulo">Brasa</div>
+    <div class="dz-botao" data-variante="brasa">
+      <div class="dz-feixe dz-brilho" aria-hidden="true"><i class="dz-ponto"></i><i class="dz-ponto"></i></div>
+      <div class="dz-feixe" aria-hidden="true"><i class="dz-ponto"></i><i class="dz-ponto"></i></div>
+      <button type="button" class="dz-btn"><canvas class="dz-campo" aria-hidden="true"></canvas>
+        <span class="dz-conteudo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Gerar Pix</span></button>
+    </div>
+    <div class="rotulo">Placa</div>
+    <div class="dz-botao" data-variante="placa">
+      <div class="dz-feixe dz-brilho" aria-hidden="true"><i class="dz-ponto"></i><i class="dz-ponto"></i></div>
+      <div class="dz-feixe" aria-hidden="true"><i class="dz-ponto"></i><i class="dz-ponto"></i></div>
+      <button type="button" class="dz-btn"><canvas class="dz-campo" aria-hidden="true"></canvas>
+        <span class="dz-conteudo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Gerar Pix</span></button>
+    </div>
+  </section>
+  <p class="nota" id="estado" aria-live="polite"></p>
+</main>
+
+<script>
+/* ───────── DitherBotao (copie daqui) ───────── */
+const CELULA = 2;   // px de CSS por célula de dither
+const FPS = 24;     // pixel art não precisa de 60
+
+/** Matriz Bayer n×n normalizada em (0,1), por recursão (a mesma do Dither Kit). */
+function bayer(ordem) {
+  let m = [[0]];
+  for (let k = 0; k < ordem; k++) {
+    const n = m.length, prox = [];
+    for (let y = 0; y < n * 2; y++) {
+      prox[y] = [];
+      for (let x = 0; x < n * 2; x++) {
+        const quad = y < n ? (x < n ? 0 : 2) : (x < n ? 3 : 1);
+        prox[y][x] = m[y % n][x % n] * 4 + quad;
+      }
+    }
+    m = prox;
+  }
+  const tot = m.length * m.length;
+  return m.map(l => l.map(v => (v + 0.5) / tot));
+}
+const BAYER8 = bayer(3);
+
+const suave = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/** Resolve QUALQUER cor CSS (var, color-mix, oklch) em [r,g,b] 0..255.
+ *  A sonda é um <span> real dentro do elemento (herda as variáveis) e sem transição, para não ler cor "no meio do caminho". */
+let _cv;
+function rgbDe(el, css) {
+  const s = document.createElement('span');
+  s.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;transition:none;animation:none;color:' + css;
+  el.appendChild(s);
+  const calc = getComputedStyle(s).color;
+  s.remove();
+  _cv ||= document.createElement('canvas');
+  _cv.width = _cv.height = 1;
+  const x = _cv.getContext('2d', { willReadFrequently: true });
+  x.clearRect(0, 0, 1, 1);
+  x.fillStyle = '#000';
+  x.fillStyle = calc;            // o navegador converte color(srgb…)/oklab(…) em sRGB
+  x.fillRect(0, 0, 1, 1);
+  const d = x.getImageData(0, 0, 1, 1).data;
+  return [d[0], d[1], d[2]];
+}
+const css = ([r, g, b], a = 1) => `rgb(${r} ${g} ${b} / ${a})`;
+const lum = ([r, g, b]) => { const f = v => (v /= 255) <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(r) + .7152 * f(g) + .0722 * f(b); };
+const contraste = (a, b) => { const [p, q] = [lum(a), lum(b)].sort((m, n) => n - m); return (p + .05) / (q + .05); };
+
+function DitherBotao(raiz) {
+  const variante = raiz.dataset.variante;                  // "brasa" | "placa"
+  const cv = raiz.querySelector('canvas');
+  const btn = raiz.querySelector('button');
+  const ctx = cv.getContext('2d');
+  const reduzido = matchMedia('(prefers-reduced-motion: reduce)');
+  let cols = 0, rows = 0, nivel = 0, alvo = 0, raf = 0, ultimo = 0, visivel = true;
+  let cor = [0, 0, 0], quente = cor, sombra = cor;
+
+  function lerCores() {
+    cor    = rgbDe(raiz, 'var(--dz-cor)');
+    quente = rgbDe(raiz, 'color-mix(in oklab, var(--dz-cor) 45%, white)');
+    sombra = rgbDe(raiz, 'var(--dz-sombra)');
+    // contraste: texto sobre o fundo real do botão (Placa = a cor cheia; Brasa = quase preto)
+    const fundo = variante === 'placa' ? cor : rgbDe(raiz, 'var(--dz-brasa-fundo)');
+    const claro = [255, 255, 255], escuro = [10, 10, 24];
+    raiz.style.setProperty('--dz-texto', contraste(claro, fundo) >= contraste(escuro, fundo) ? 'white' : 'oklch(0.18 0.03 270)');
+  }
+
+  function desenhar(t) {
+    ctx.clearRect(0, 0, cols, rows);
+    const lotes = [[], [], []];                              // 0 cor, 1 sombra, 2 brilho
+    for (let y = 0; y < rows; y++) {
+      const v = y / rows, linha = BAYER8[y % 8];
+      for (let x = 0; x < cols; x++) {
+        const u = x / cols, lim = linha[x % 8];
+        const onda = 0.5 + 0.5 * Math.sin(u * 9 + t * 0.9 + Math.sin(v * 5 - t * 0.7) * 1.5);
+        const grao = 0.5 + 0.5 * Math.sin(u * 23 - t * 1.3 + v * 11);
+        if (variante === 'brasa') {
+          const sobe = suave(0.1, 1, v);
+          const borda = 0.45 * suave(0.78, 1, Math.abs(u - 0.5) * 2);
+          const valor = sobe * (0.42 + 0.58 * onda) * (0.68 + 0.32 * grao) * (0.62 + 0.5 * nivel)
+                      + borda * (0.5 + 0.5 * nivel) + 0.22 * nivel * (1 - v) * onda;
+          const d = valor - lim;
+          if (d > 0.34) lotes[2].push(x, y); else if (d > 0) lotes[0].push(x, y);
+        } else {
+          const sombreado = Math.pow(suave(0, 1.35, u * 0.55 + v * 0.95), 1.15) * (0.55 + 0.45 * onda);
+          if (sombreado - lim * 0.9 > 0) lotes[1].push(x, y);
+          const faixa = ((t * 0.22) % 1.7) - 0.35;
+          const brilho = Math.exp(-(((u + v * 0.35 - faixa) * 5.5) ** 2)) * 0.62 * (1 - v * 0.5)
+                       + 0.22 * (1 - suave(0, 0.55, v)) * (1 - suave(0, 0.7, u)) + 0.18 * nivel;
+          if (brilho - lim * 0.8 > 0) lotes[2].push(x, y);
+        }
+      }
+    }
+    // um único fill por cor: milhares de rects num só path são baratos; milhares de fills, não.
+    const pintar = (lote, estilo) => {
+      if (!lote.length) return;
+      ctx.fillStyle = estilo; ctx.beginPath();
+      for (let i = 0; i < lote.length; i += 2) ctx.rect(lote[i], lote[i + 1], 1, 1);
+      ctx.fill();
+    };
+    pintar(lotes[0], css(cor));
+    pintar(lotes[1], css(sombra));
+    pintar(lotes[2], variante === 'brasa' ? css(quente) : 'rgb(255 255 255 / .55)');
+  }
+
+  function medir() {
+    const r = cv.getBoundingClientRect();
+    cols = Math.max(1, Math.ceil(r.width / CELULA));
+    rows = Math.max(1, Math.ceil(r.height / CELULA));
+    cv.width = cols; cv.height = rows;                       // resolução interna = nº de células
+    desenhar(performance.now() / 1000);
+  }
+
+  function passo(agora) {
+    raf = requestAnimationFrame(passo);
+    if (document.hidden || !visivel || agora - ultimo < 1000 / FPS) return;
+    ultimo = agora;
+    nivel += (alvo - nivel) * 0.18;
+    desenhar(agora / 1000);
+  }
+  function iniciar() {
+    cancelAnimationFrame(raf);
+    if (reduzido.matches) { nivel = alvo; desenhar(3.3); return; }   // quadro parado
+    raf = requestAnimationFrame(passo);
+  }
+
+  const acender = on => { alvo = on ? 1 : 0; raiz.dataset.aceso = on; if (reduzido.matches) { nivel = alvo; desenhar(3.3); } };
+  btn.addEventListener('pointerenter', () => acender(true));
+  btn.addEventListener('pointerleave', () => acender(false));
+  btn.addEventListener('focus', () => acender(true));
+  btn.addEventListener('blur', () => acender(false));
+  raiz.dataset.aceso = false;
+
+  new ResizeObserver(medir).observe(cv);
+  new IntersectionObserver(([e]) => { visivel = e.isIntersecting; }).observe(raiz);
+  document.addEventListener('visibilitychange', iniciar);
+  reduzido.addEventListener('change', iniciar);
+  // tema/cor global mudou (atributo ou style no <html>): reler as cores e redesenhar
+  new MutationObserver(() => { lerCores(); if (reduzido.matches) desenhar(3.3); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
+
+  lerCores(); medir(); iniciar();
+}
+document.querySelectorAll('.dz-botao').forEach(DitherBotao);
+
+/* ───────── Controles da demonstração (não fazem parte do botão) ───────── */
+const CORES = [
+  ['Lima', 'oklch(0.84 0.19 125)'], ['Laranja', 'oklch(0.78 0.17 55)'], ['Menta', 'oklch(0.82 0.13 170)'],
+  ['Azul', 'oklch(0.52 0.24 265)'], ['Rosa', 'oklch(0.7 0.22 350)'],
+];
+const raizHtml = document.documentElement;
+const cores = document.getElementById('cores');
+CORES.forEach(([nome, valor], i) => {
+  const b = document.createElement('button');
+  b.className = 'amostra'; b.title = nome; b.setAttribute('aria-label', 'Cor ' + nome);
+  b.style.background = valor; b.setAttribute('aria-pressed', i === 0);
+  b.onclick = () => { raizHtml.style.setProperty('--accent', valor); [...cores.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+  cores.append(b);
+});
+const temas = document.getElementById('temas');
+['escuro', 'claro'].forEach((t, i) => {
+  const b = document.createElement('button'); b.textContent = t[0].toUpperCase() + t.slice(1); b.setAttribute('aria-pressed', raizHtml.dataset.theme === t);
+  b.onclick = () => { raizHtml.dataset.theme = t; [...temas.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+  temas.append(b);
+});
+document.querySelectorAll('.dz-btn').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('estado').textContent = 'Clique registrado (aqui você chamaria sua ação).';
+}));
+</script>
+</body>
+</html>

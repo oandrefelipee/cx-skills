@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Objetos em pixel e 3D leve em dither</title>
+<!--
+  EXEMPLO 3 · Cena de objetos em pixel + objeto 3D leve por SDF (WebGL2, shaders puros, sem libs). Abra no navegador.
+
+  A) CENA EM PIXEL: um fragment shader desenha pilha de moedas, pacote isométrico, cartão, notas e nuvens num quadro
+     LÓGICO pequeno (cada pixel do canvas é um "pixel de arte", ampliado por número inteiro, sem suavizar).
+     Sombreamento em 3 tons por Bayer 4x4 (função shade). Cores: 4 tokens + fundo/primeiro plano da página.
+  B) 3D LEVE: raymarching de campos de distância (SDF) sem biblioteca. A luz vira 4 tons por Bayer 8x8 e cada tom
+     é uma cor do "gradient map" (--d0..--d3, derivadas de --accent). Formas fazem morph misturando as distâncias.
+
+  Em ambos: cor vinda de variáveis CSS (sonda getComputedStyle), pausa com aba oculta/fora da tela,
+  prefers-reduced-motion = quadro parado (relido ao mudar tema/cor/forma), teto de FPS.
+-->
+<script>/* tema inicial = esquema do sistema (o seletor da página só demonstra a troca) */
+document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';</script>
+<style>
+/* ───────── TOKENS: simulam as variáveis do projeto de destino. No app real, apague este bloco. ───────── */
+:root{
+  --accent: oklch(0.62 0.2 265);
+  --accent-2: oklch(0.86 0.17 88);    /* ouro */
+  --accent-3: oklch(0.8 0.13 185);    /* turquesa */
+  --accent-4: oklch(0.66 0.2 305);    /* roxo */
+  --background: oklch(0.15 0.02 270);
+  --foreground: oklch(0.96 0.01 270);
+  color-scheme: dark;
+}
+:root[data-theme="claro"]{
+  --background: oklch(0.975 0.006 270);
+  --foreground: oklch(0.2 0.02 270);
+  color-scheme: light;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--background);color:var(--foreground);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px 16px 40px}
+main{width:min(100%,820px);margin:0 auto;display:grid;gap:16px}
+h1{font-size:18px;margin:0} h2{font-size:14px;margin:6px 0 0;letter-spacing:.04em;text-transform:uppercase;color:color-mix(in oklab,var(--foreground) 65%,var(--background))}
+.controles{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px}
+.controles label{display:inline-flex;gap:6px;align-items:center}
+.controles button{font:inherit;font-size:13px;padding:5px 10px;border-radius:9px;cursor:pointer;border:1px solid color-mix(in oklab,var(--foreground) 25%,transparent);background:transparent;color:var(--foreground)}
+.controles button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+.amostra{width:20px;height:20px;border-radius:50%;padding:0 !important;border:2px solid var(--background) !important}
+.hud{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:color-mix(in oklab,var(--foreground) 65%,var(--background))}
+
+/* Tokens da cena (copie): 4 cores de objeto (mapeie para as cores de categoria/gráfico do seu app) + rampa de 4 tons do 3D (derivada de --accent). */
+.cena{
+  --obj-1: var(--accent);
+  --obj-2: var(--accent-2);
+  --obj-3: var(--accent-3);
+  --obj-4: var(--accent-4);
+  --d0: color-mix(in oklab, var(--accent) 36%, black);
+  --d1: var(--accent);
+  --d2: color-mix(in oklab, var(--accent) 56%, white);
+  --d3: color-mix(in oklab, var(--accent) 6%, white);
+}
+.palco{position:relative;overflow:hidden;border-radius:18px;background:color-mix(in oklab,var(--accent) 8%,var(--background))}
+.palco canvas{display:block;image-rendering:pixelated}
+#palcoA{min-height:300px}
+#palcoA canvas{position:absolute;left:0;top:0}
+#palcoB{display:grid;place-items:center;padding:14px}
+.fallback{padding:20px;text-align:center;color:color-mix(in oklab,var(--foreground) 70%,var(--background))}
+</style>
+</head>
+<body>
+<main>
+  <h1>Objetos em pixel e 3D leve em dither</h1>
+  <div class="controles"><span>Cor:</span><span id="cores" style="display:inline-flex;gap:8px"></span><span>Tema:</span><span id="temas" style="display:inline-flex;gap:6px"></span></div>
+
+  <div class="cena">
+    <h2>A · Cena em pixel (shader, Bayer 4×4)</h2>
+    <div class="controles" style="margin:6px 0 10px"><label>Pacote <input id="idx" type="range" min="0" max="3" step="0.01" value="1"></label><span class="hud" id="idxTxt">1,0</span></div>
+    <div class="palco" id="palcoA" role="img" aria-label="Pilha de moedas, pacote, cartão e notas de dinheiro flutuando num céu de dither"></div>
+    <div class="hud" id="hudA"></div>
+
+    <h2 style="margin-top:20px">B · Objeto 3D leve (SDF + Bayer 8×8 + gradient map)</h2>
+    <div class="controles" style="margin:6px 0 10px"><span>Forma:</span><span id="formas"></span><span class="hud">mova o mouse sobre o objeto: a luz segue</span></div>
+    <div class="palco" id="palcoB" role="img" aria-label="Objeto tridimensional em pontilhado: moeda, pacote ou pilha de moedas, que se transformam uma na outra"></div>
+    <div class="hud" id="hudB"></div>
+  </div>
+</main>
+
+<script>
+/* ───────── Utilitários comuns (copie) ───────── */
+const VERT = `#version 300 es
+void main(){ vec2 p = vec2((gl_VertexID<<1)&2, gl_VertexID&2); gl_Position = vec4(p*2.-1., 0., 1.); }`;
+
+let _cv;
+function rgbDe(el, css) {           // [r,g,b] 0..1 de qualquer cor CSS; sonda sem transição dentro do elemento
+  const s = document.createElement('span');
+  s.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;transition:none;animation:none;color:' + css;
+  el.appendChild(s); const calc = getComputedStyle(s).color; s.remove();
+  _cv ||= document.createElement('canvas'); _cv.width = _cv.height = 1;
+  const x = _cv.getContext('2d', { willReadFrequently: true });
+  x.clearRect(0, 0, 1, 1); x.fillStyle = '#000'; x.fillStyle = calc; x.fillRect(0, 0, 1, 1);
+  const d = x.getImageData(0, 0, 1, 1).data; return [d[0] / 255, d[1] / 255, d[2] / 255];
+}
+
+/** Cria o programa WebGL2 e devolve { gl, U(nome) }. Lança erro legível se o shader não compilar. */
+function criarPrograma(cv, frag, ctxOpts) {
+  const gl = cv.getContext('webgl2', { antialias: false, powerPreference: 'low-power', ...ctxOpts });
+  if (!gl) return null;
+  const compila = (tipo, src) => {
+    const s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compila(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, compila(gl.FRAGMENT_SHADER, frag));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  return { gl, U: n => gl.getUniformLocation(prog, n) };
+}
+
+/** Laço de animação com todas as boas maneiras: teto de FPS, pausa fora da tela/aba oculta, reduced motion = 1 quadro. */
+function criarLaco(host, desenhar, { fps = 24 } = {}) {
+  const reduzido = matchMedia('(prefers-reduced-motion: reduce)');
+  let raf = 0, ultimo = 0, visivel = true, quadros = 0;
+  const passo = agora => {
+    raf = requestAnimationFrame(passo);
+    if (document.hidden || !visivel || agora - ultimo < 1000 / fps) return;
+    ultimo = agora; quadros++; desenhar(agora / 1000, false);
+  };
+  const iniciar = () => { cancelAnimationFrame(raf); if (reduzido.matches) desenhar(3.3, true); else raf = requestAnimationFrame(passo); };
+  new IntersectionObserver(([e]) => { visivel = e.isIntersecting; }).observe(host);
+  document.addEventListener('visibilitychange', iniciar); reduzido.addEventListener('change', iniciar);
+  return { iniciar, quadros: () => quadros, reduzido: () => reduzido.matches,
+           pedir: () => { if (reduzido.matches) desenhar(3.3, true); } };       // redesenha o quadro parado sob demanda
+}
+const aoMudarTema = fn => new MutationObserver(fn).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
+
+/* ───────── A · cena em pixel ───────── */
+const FRAG_A = `#version 300 es
+precision highp float;
+uniform vec2 uRes;                       // quadro lógico em pixels de arte
+uniform float uTime, uIdx;               // uIdx: 0..3 (pacote), com fração
+uniform vec3 uBg, uFg, uC0, uC1, uC2, uC3;
+out vec4 outColor;
+vec2 P;
+float b2(vec2 v){ return 2.*v.x + 3.*v.y - 4.*v.x*v.y; }
+float bayer(vec2 p){ vec2 a = mod(p,2.), b = mod(floor(p/2.),2.); return (4.*b2(a) + b2(b) + .5)/16.; }   // Bayer 4x4
+// 3 tons de uma cor: sombra / base / luz, escolhidos pelo limiar de Bayer. v em 0..1 (0 escuro, 1 claro).
+vec3 shade(vec3 base, float v){
+  vec3 dk = mix(base, vec3(.05), .55), lt = mix(base, vec3(1.), .45);
+  float d = bayer(P); v = clamp(v,0.,1.);
+  if (v < .5) return (v*2. > d) ? base : dk;
+  return ((v-.5)*2. > d) ? lt : base;
+}
+float box(vec2 q, vec2 h){ vec2 d = abs(q)-h; return length(max(d,0.)) + min(max(d.x,d.y),0.); }
+mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c,s,-s,c); }
+float hsh(float n){ return fract(sin(n*12.9898)*43758.5453); }
+vec3 packC(){ return uIdx<1. ? mix(uC0,uC1,uIdx) : (uIdx<2. ? mix(uC1,uC2,uIdx-1.) : mix(uC2,uC3,uIdx-2.)); }
+
+// moeda: topo elíptico (altura th), lateral serrilhada; p relativo ao centro da base
+vec4 coin(vec2 p, vec2 r, float th, vec3 c){
+  float e1 = length(vec2(p.x/r.x, (p.y-th)/r.y)), e0 = length(vec2(p.x/r.x, p.y/r.y));
+  if (e1 < 1.){
+    vec3 k = shade(c, e1>.8 ? .9 : .62);
+    if (e1>.5 && e1<.6) k = shade(c,.3);
+    vec2 f = vec2(p.x/r.x+.35, (p.y-th)/r.y-.35);
+    if (e1<.78 && dot(f,f)<.05) k = shade(c,.95);
+    return vec4(k,1.);
+  }
+  if ((e0<1. && p.y<=th) || (p.y>=0. && p.y<=th && abs(p.x)<r.x)){
+    vec3 k = shade(c, .52-.34*((p.x/r.x+1.)*.5));
+    if (mod(floor(p.x),4.)==0.) k = shade(c,.12);
+    return vec4(k,1.);
+  }
+  return vec4(0.);
+}
+// pacote isométrico: p relativo ao centro da face de cima
+vec4 parcel(vec2 p, float w, float h, float d, vec3 c){
+  float ax = abs(p.x);
+  if (ax/w + abs(p.y)/h < 1.){ vec3 k = shade(c,.86); if (abs(p.x/w-p.y/h)<.2) k = shade(vec3(1.),.7); return vec4(k,1.); }
+  if (ax <= w){
+    float ye = -h*(1.-ax/w);
+    if (p.y<ye && p.y>ye-d){
+      if (p.x<0.){ vec3 k = shade(c,.5); if (abs(p.x+w*.5)<3.5) k = shade(vec3(1.),.55); return vec4(k,1.); }
+      vec3 k = shade(c,.2); vec2 l = p-vec2(w*.5, ye-d*.5-h*.25);
+      if (abs(l.x)<7. && abs(l.y)<5.){ k = shade(vec3(1.),.78); if (abs(l.y)<1.5 && abs(l.x)<4.5) k = shade(c,.2); }
+      return vec4(k,1.);
+    }
+  }
+  return vec4(0.);
+}
+vec4 card(vec2 p, vec3 a, vec3 b){
+  float d = box(p, vec2(31.,19.)) - 3.;
+  if (d > 0.) return vec4(0.);
+  float u = (p.x+31.)/62.; vec3 c = mix(a,b,u);
+  float st = fract((p.x+p.y)*.045 - uTime*.18);
+  vec3 k = shade(c, .52 + .3*step(.88,st) + .22*(1.-u));
+  if (d > -1.2) k = shade(c,.95);
+  if (box(p-vec2(-18.,3.), vec2(6.,5.)) < 0.) k = shade(mix(c,vec3(1.,.8,.3),.6),.7);   // chip
+  if (p.y<-9. && p.y>-12. && p.x>-24. && p.x<14.) k = shade(vec3(1.),.6);
+  if (p.y<-14. && p.y>-16. && p.x>-24. && p.x<-2.) k = shade(vec3(1.),.45);
+  return vec4(k,1.);
+}
+vec4 note(vec2 p, vec3 cc){                       // cédula simples (sem dígitos)
+  float bx = box(p, vec2(13.,6.5)); if (bx > 0.) return vec4(0.);
+  vec3 c = shade(cc,.82);
+  if (bx > -1.) c = shade(cc,.2);
+  else if (abs(box(p,vec2(11.2,5.))+.2) < .45) c = shade(cc,.4);
+  else if (mod(floor(p.x+p.y*2.),4.) == 0.) c = shade(cc,.7);
+  vec2 e = p/vec2(3.6,4.6);
+  if (dot(e,e) < 1.){ c = shade(cc,.3); vec2 f = e-vec2(-.25,.3); if (dot(f,f) < .22) c = shade(cc,.58); }
+  if (abs(length(p-vec2(8.2,-.4))-2.2) < .5) c = shade(cc,.28);
+  return vec4(c,1.);
+}
+void main(){
+  P = floor(gl_FragCoord.xy);
+  vec2 q = P + .5 - .5*uRes;
+  float t = uTime, S = min(uRes.y/150., uRes.x/250.);   // escala dos objetos: cabe na altura E na largura (senão corta no celular)
+  vec3 pc = packC();
+  // céu: degradê vertical por limiar Bayer entre o tom do fundo e um brilho da cor do pacote
+  float g = clamp(P.y/uRes.y, 0., 1.);
+  float gv = pow(1.-g, 1.6)*.95;
+  vec3 col = bayer(P) < gv ? mix(uBg, pc, .5) : mix(uBg, pc, .06);
+  // halo atrás da pilha
+  float hl = length(vec2(q.x/(.42*uRes.x), (q.y+4.)/(.8*uRes.y)));
+  if (hl < 1. && bayer(P+3.) < (1.-hl)*.5) col = mix(pc, vec3(1.), .3);
+  // nuvens em dither: faixas baixas e discretas (a distância precisa ser em px do quadro, não em "x" puro)
+  for (int i=0;i<4;i++){
+    float fi = float(i);
+    float cx = mod(t*(3.+fi*2.) + fi*170., uRes.x+160.) - (uRes.x*.5+80.);
+    vec2 d = q - vec2(cx, (-6.+fi*22.+(i==1?14.:0.))*S);
+    d /= S;
+    float s = min(min(length(d/vec2(46.,7.)), length((d-vec2(20.,5.))/vec2(30.,8.))), length((d+vec2(22.,4.))/vec2(28.,7.)));
+    if (s < 1. && bayer(P+fi) < (1.-s)*.9) col = shade(mix(pc, vec3(1.), .5), .28 + .5*(1.-s) + .1*fi);
+  }
+  // notas subindo
+  for (int k=0;k<4;k++){
+    float fk = float(k), tt = fract(t*.09 + fk/4.);
+    vec2 pos = vec2((-.36 + fk*.24)*uRes.x + 14.*sin(tt*6.+fk), (-.34 + tt*1.3)*uRes.y*.5);
+    vec2 pp = rot(.5*sin(tt*5.+fk*2.)) * (q-pos) / (1.1*S);
+    vec4 n = note(pp, pc);
+    float fade = tt>.82 ? (tt-.82)/.18 : 0.;
+    if (n.a>.5 && bayer(P) >= fade) col = n.rgb;
+  }
+  vec2 qo = q / S;                                // coordenadas dos objetos
+  float sh = length(vec2(qo.x/110., (qo.y+51.)/12.));          // sombra em dither sob os objetos
+  if (sh < 1. && bayer(P) < (1.-sh)*.8) col = mix(col, vec3(0.), .6);
+  // pilha de moedas (cresce com o pacote); a de cima desenha por último, por isso o laço vai de cima para baixo
+  float n = 3. + uIdx*3.;
+  for (int i=13; i>=0; i--){
+    float fi = float(i);
+    if (fi < n){
+      vec2 base = vec2((hsh(fi)-.5)*5., -44. + fi*6. + 2.*sin(t*1.4));
+      vec4 k = coin(qo-base, vec2(30.,9.), 7., uC1);
+      if (k.a > .5){ col = k.rgb; break; }
+    }
+  }
+  vec4 pk = parcel(qo - vec2(-80., -10.+6.*sin(t*1.1+1.)), 24., 12., 27., uC0);
+  if (pk.a > .5) col = pk.rgb;
+  vec2 cq = rot(-.34 + .05*sin(t*.9)) * (qo - vec2(82., 2.+5.*sin(t*1.2)));
+  vec4 cd = card(cq, uC3, uC2);
+  if (cd.a > .5) col = cd.rgb;
+  // brilhos em cruz (pontos que piscam)
+  for (int k=0;k<7;k++){
+    float fk = float(k);
+    vec2 sp = vec2((hsh(fk*3.1)-.5)*uRes.x*.85, (hsh(fk*7.7)-.5)*uRes.y*.75);
+    float tw = .5 + .5*sin(t*2. + fk*2.3);
+    vec2 d = q - sp; float l = abs(d.x)+abs(d.y);
+    if (tw>.55 && l<3.+4.*tw && (abs(d.x)<.7 || abs(d.y)<.7)) col = mix(pc, vec3(1.), .8);
+  }
+  outColor = vec4(col, 1.);
+}`;
+
+function iniciarCenaA(host) {
+  const ZOOM = 3;                                    // px de CSS por pixel de arte (inteiro!)
+  const cv = document.createElement('canvas'); host.append(cv);
+  const prog = criarPrograma(cv, FRAG_A, { alpha: false });
+  if (!prog) { host.innerHTML = '<p class="fallback">Este navegador não abriu o WebGL2.</p>'; return null; }
+  const { gl, U } = prog;
+  const u = { res: U('uRes'), time: U('uTime'), idx: U('uIdx'), bg: U('uBg'), fg: U('uFg'), c: [0, 1, 2, 3].map(i => U('uC' + i)) };
+  const est = { idx: 1, vivo: 1, cols: 1, rows: 1, bg: [0, 0, 0], fg: [1, 1, 1], cs: [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1]] };
+  const ler = () => { est.bg = rgbDe(host, 'var(--background)'); est.fg = rgbDe(host, 'var(--foreground)'); est.cs = [1, 2, 3, 4].map(i => rgbDe(host, `var(--obj-${i})`)); };
+  const medir = () => {
+    est.cols = Math.max(2, Math.ceil(host.clientWidth / ZOOM)); est.rows = Math.max(2, Math.ceil(host.clientHeight / ZOOM));
+    cv.width = est.cols; cv.height = est.rows; cv.style.width = est.cols * ZOOM + 'px'; cv.style.height = est.rows * ZOOM + 'px';
+    gl.viewport(0, 0, est.cols, est.rows);
+  };
+  const desenhar = (t, parado) => {
+    est.vivo = parado ? est.idx : est.vivo + (est.idx - est.vivo) * 0.14;
+    gl.uniform2f(u.res, est.cols, est.rows); gl.uniform1f(u.time, t); gl.uniform1f(u.idx, est.vivo);
+    gl.uniform3fv(u.bg, est.bg); gl.uniform3fv(u.fg, est.fg); est.cs.forEach((c, i) => gl.uniform3fv(u.c[i], c));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
+  const laco = criarLaco(host, desenhar, { fps: 24 });
+  new ResizeObserver(() => { medir(); laco.pedir(); }).observe(host);
+  aoMudarTema(() => { ler(); laco.pedir(); });
+  ler(); medir(); laco.iniciar();
+  return { est, laco, pedir: laco.pedir };
+}
+
+/* ───────── B · 3D leve por SDF ───────── */
+const FRAG_B = `#version 300 es
+precision highp float;
+uniform vec2 uRes;
+uniform float uTime, uShape, uYaw;
+uniform vec2 uLight;                 // posição da luz em -1..1 (segue o mouse)
+uniform vec3 uD[4];                  // gradient map: sombra, base, claro, branco
+out vec4 outColor;
+
+float add4(float xb,float yb){ return 2.*xb + 3.*yb - 4.*xb*yb; }
+float bayer8(vec2 c){
+  vec2 q = mod(floor(c), 8.);
+  float b0x=mod(q.x,2.), b0y=mod(q.y,2.), b1x=mod(floor(q.x/2.),2.), b1y=mod(floor(q.y/2.),2.), b2x=floor(q.x/4.), b2y=floor(q.y/4.);
+  return (add4(b2x,b2y) + 4.*add4(b1x,b1y) + 16.*add4(b0x,b0y) + .5)/64.;
+}
+mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
+
+// ── primitivas SDF (distância assinada; negativa dentro) ──
+float sdBox(vec3 p, vec3 b, float r){ vec3 q = abs(p)-b+r; return length(max(q,0.)) + min(max(q.x,max(q.y,q.z)),0.) - r; }
+float sdDiscZ(vec3 p, float rad, float h, float r){ vec2 d = vec2(length(p.xy)-rad+r, abs(p.z)-h+r); return min(max(d.x,d.y),0.) + length(max(d,0.)) - r; }
+float sdDiscY(vec3 p, float rad, float h, float r){ vec2 d = vec2(length(p.xz)-rad+r, abs(p.y)-h+r); return min(max(d.x,d.y),0.) + length(max(d,0.)) - r; }
+
+// ── formas (centradas na origem, raio ~1) ──
+float moeda(vec3 p){
+  float d = sdDiscZ(p, .88, .13, .06);
+  float aro = max(abs(length(p.xy)-.62)-.035, abs(p.z)-.17);            // anel em relevo
+  float cruz = min(sdBox(p, vec3(.34,.08,.17), .02), sdBox(p, vec3(.08,.34,.17), .02));
+  return min(d, min(aro, cruz));
+}
+float pacote(vec3 p){
+  float d = sdBox(p, vec3(.82,.56,.56), .09);
+  float fita = sdBox(p, vec3(.13,.585,.585), .02);                      // fita um pouco maior que a caixa
+  float sel  = sdDiscZ(p - vec3(.4,.05,.58), .2, .03, .01);           // etiqueta
+  return min(d, min(fita, sel));
+}
+float pilha(vec3 p){
+  float d = 1e3;
+  for (int i=0;i<4;i++){
+    vec3 q = p - vec3(.03*float(i%2) - .015, -.62 + .3*float(i), 0.);
+    d = min(d, sdDiscY(q, .62, .13, .05));
+  }
+  return d;
+}
+float forma(int i, vec3 p){ return i==0 ? moeda(p) : (i==1 ? pacote(p) : pilha(p)); }
+float map(vec3 p){
+  float s = clamp(uShape, 0., 2.), m = smoothstep(0., 1., fract(s));
+  int a = int(floor(s)), b = min(a+1, 2);
+  float da = forma(a, p);
+  if (m < .001 || a == b) return da;
+  return mix(da, forma(b, p), m);                                      // morph: mistura das distâncias
+}
+vec3 normal(vec3 p){ vec2 e = vec2(.004,0.); return normalize(vec3(map(p+e.xyy)-map(p-e.xyy), map(p+e.yxy)-map(p-e.yxy), map(p+e.yyx)-map(p-e.yyx))); }
+
+void main(){
+  vec2 cell = floor(gl_FragCoord.xy);
+  vec2 uv = (cell + .5 - .5*uRes) / uRes.y;
+  vec3 ro = vec3(0., .1, 6.6), rd = normalize(vec3(uv, -2.7));
+  float bob = .05*sin(uTime*1.1);
+  float yaw = uYaw + .55*sin(uTime*.55);
+  mat2 ry = rot(yaw), rx = rot(.32 + .06*sin(uTime*.4));
+  // objeto fica parado; giramos o raio inteiro no espaço do objeto
+  vec3 o = ro - vec3(0., bob, 0.), d = rd;
+  o.xz = ry*o.xz; d.xz = ry*d.xz; o.yz = rx*o.yz; d.yz = rx*d.yz;
+
+  float t = 4.8; bool hit = false;
+  for (int i=0;i<56;i++){
+    float h = map(o + d*t);
+    if (h < .004){ hit = true; break; }
+    t += h*.85;                                                        // passo conservador (o morph não é um SDF exato)
+    if (t > 8.8) break;
+  }
+  vec3 col = vec3(0.); float al = 0.;
+  if (hit){
+    vec3 p = o + d*t, n = normal(p);
+    float ao = .55 + .45*clamp(map(p + n*.12)/.12, 0., 1.);
+    // luz pontual no espaço do mundo, trazida ao espaço do objeto
+    vec3 lw = vec3(uLight*2.6, 3.4);
+    lw.xz = ry*lw.xz; lw.yz = rx*lw.yz;
+    vec3 L = normalize(lw - p);
+    float dif = max(dot(n, L), 0.);
+    float spc = pow(max(dot(reflect(-L, n), -d), 0.), 26.);
+    float fre = pow(1. - max(dot(n, -d), 0.), 3.);
+    float lum = .10 + .78*dif*ao + .55*spc + .22*fre;
+    float l = clamp(lum, 0., 1.)*3. + bayer8(cell);                    // o limiar Bayer decide entre tons vizinhos
+    col = uD[clamp(int(floor(l)), 0, 3)]; al = 1.;
+  } else {
+    // sombra de contato em dither (uma elipse achatada sob o objeto)
+    vec2 sq = (cell + .5 - vec2(.5*uRes.x, .12*uRes.y)) / vec2(.30*uRes.x, .035*uRes.y);
+    float sh = 1. - dot(sq,sq);
+    if (sh > 0. && bayer8(cell) < sh*.8){ col = uD[0]; al = .7; }
+  }
+  outColor = vec4(col*al, al);                                         // alfa pré-multiplicado
+}`;
+
+function iniciarCenaB(host) {
+  const LOGICO = 140;                                // quadro lógico quadrado (pixels de arte)
+  const cv = document.createElement('canvas'); host.append(cv);
+  const prog = criarPrograma(cv, FRAG_B, { alpha: true, premultipliedAlpha: true });
+  if (!prog) { host.innerHTML = '<p class="fallback">Este navegador não abriu o WebGL2.</p>'; return null; }
+  const { gl, U } = prog;
+  const u = { res: U('uRes'), time: U('uTime'), shape: U('uShape'), yaw: U('uYaw'), light: U('uLight'), d: U('uD[0]') };
+  const est = { forma: 0, vivo: 0, luz: [-0.5, 0.6], luzVivo: [-0.5, 0.6], tons: new Float32Array(12) };
+  const ler = () => { est.tons = new Float32Array([0, 1, 2, 3].flatMap(i => rgbDe(host, `var(--d${i})`))); };
+  const medir = () => {                              // zoom inteiro: o maior que cabe no pai (mín. 1)
+    const zoom = Math.max(1, Math.min(3, Math.floor((host.clientWidth - 28) / LOGICO)));
+    cv.width = cv.height = LOGICO; cv.style.width = cv.style.height = LOGICO * zoom + 'px';
+    gl.viewport(0, 0, LOGICO, LOGICO);
+  };
+  const desenhar = (t, parado) => {
+    if (parado) { est.vivo = est.forma; est.luzVivo = est.luz; }
+    else { est.vivo += (est.forma - est.vivo) * 0.1; est.luzVivo = est.luzVivo.map((v, i) => v + (est.luz[i] - v) * 0.15); }
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(u.res, LOGICO, LOGICO); gl.uniform1f(u.time, parado ? 0.9 : t);
+    gl.uniform1f(u.shape, est.vivo); gl.uniform1f(u.yaw, 0.45);
+    gl.uniform2f(u.light, est.luzVivo[0], est.luzVivo[1]); gl.uniform3fv(u.d, est.tons);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
+  const laco = criarLaco(host, desenhar, { fps: 18 });                 // o 3D é mais pesado: 18 quadros bastam
+  host.addEventListener('pointermove', e => {
+    const r = cv.getBoundingClientRect();
+    est.luz = [Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - 0.5) * 2)), Math.max(-1, Math.min(1, -((e.clientY - r.top) / r.height - 0.5) * 2))];
+    laco.pedir();
+  });
+  new ResizeObserver(() => { medir(); laco.pedir(); }).observe(host);
+  aoMudarTema(() => { ler(); laco.pedir(); });
+  ler(); medir(); laco.iniciar();
+  return { est, laco, pedir: laco.pedir };
+}
+
+/* ───────── Demonstração ───────── */
+const A = iniciarCenaA(document.getElementById('palcoA'));
+const B = iniciarCenaB(document.getElementById('palcoB'));
+if (A) document.getElementById('idx').oninput = e => { A.est.idx = +e.target.value; document.getElementById('idxTxt').textContent = (+e.target.value).toFixed(1).replace('.', ','); A.pedir(); };
+if (B) {
+  const formas = document.getElementById('formas');
+  ['Moeda', 'Pacote', 'Pilha'].forEach((nome, i) => {
+    const b = document.createElement('button'); b.textContent = nome; b.setAttribute('aria-pressed', i === 0);
+    b.onclick = () => { B.est.forma = i; [...formas.children].forEach(c => c.setAttribute('aria-pressed', c === b)); B.pedir(); };
+    formas.append(b);
+  });
+}
+// HUD de FPS medido
+let k0 = performance.now(), qa = 0, qb = 0;
+setInterval(() => {
+  const agora = performance.now(), dt = (agora - k0) / 1000; k0 = agora;
+  if (A) { const q = A.laco.quadros(); document.getElementById('hudA').textContent = `quadro lógico ${A.est.cols}×${A.est.rows} · zoom 3× · ${((q - qa) / dt).toFixed(0)} quadros/s`; qa = q; }
+  if (B) { const q = B.laco.quadros(); document.getElementById('hudB').textContent = `quadro lógico 140×140 · ${((q - qb) / dt).toFixed(0)} quadros/s (teto de 18; medido aqui em renderização por software)`; qb = q; }
+}, 1000);
+const CORES = [['Azul', 'oklch(0.62 0.2 265)'], ['Lima', 'oklch(0.84 0.19 125)'], ['Laranja', 'oklch(0.75 0.18 50)'], ['Menta', 'oklch(0.8 0.13 170)'], ['Rosa', 'oklch(0.68 0.22 350)']];
+const cores = document.getElementById('cores');
+CORES.forEach(([nome, v], i) => {
+  const b = document.createElement('button'); b.className = 'amostra'; b.title = nome; b.setAttribute('aria-label', 'Cor ' + nome); b.style.background = v; b.setAttribute('aria-pressed', i === 0);
+  b.onclick = () => { document.documentElement.style.setProperty('--accent', v); [...cores.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+  cores.append(b);
+});
+const temas = document.getElementById('temas');
+['escuro', 'claro'].forEach((t, i) => {
+  const b = document.createElement('button'); b.textContent = t[0].toUpperCase() + t.slice(1); b.setAttribute('aria-pressed', document.documentElement.dataset.theme === t);
+  b.onclick = () => { document.documentElement.dataset.theme = t; [...temas.children].forEach(c => c.setAttribute('aria-pressed', c === b)); };
+  temas.append(b);
+});
+</script>
+</body>
+</html>

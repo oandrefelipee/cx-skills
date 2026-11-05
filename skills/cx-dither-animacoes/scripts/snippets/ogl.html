@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OGL + Bayer</title>
+<style>
+  :root { color-scheme: light dark; --c0:#eef0fb; --c1:#a9b7f0; --c2:#5a72d4; --c3:#1b2766; --page:#f7f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --c0:#090a13; --c1:#1f2c78; --c2:#5f79e8; --c3:#f1ecd9; --page:#0c0d16; } }
+  html, body { margin: 0; background: var(--page); }
+  /* !important: o OGL escreve width/height em px no style do canvas (setSize) e isso venceria a regra */
+  canvas { display: block; width: 640px !important; height: auto !important; max-width: 100%; aspect-ratio: 16 / 9; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Campo de ondas em dither Bayer" role="img"></canvas>
+<script type="module">
+// OGL 1.0.11 (jsDelivr +esm). Renderer de 1 pixel por célula; o CSS amplia com image-rendering: pixelated.
+import { Renderer, Program, Mesh, Triangle } from 'https://cdn.jsdelivr.net/npm/ogl@1.0.11/+esm';
+
+const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+const token = (name) => {                      // '--c0' -> [r, g, b] em 0..1 (entende oklch, color-mix, light-dark)
+  const el = document.body.appendChild(document.createElement('i'));
+  el.style.color = `var(${name})`;
+  probe.canvas.width = probe.canvas.height = 1;
+  probe.fillStyle = '#000'; probe.fillStyle = getComputedStyle(el).color; probe.fillRect(0, 0, 1, 1);
+  el.remove();
+  return [...probe.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((v) => v / 255);
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const W = 160, H = 90;
+const renderer = new Renderer({ canvas: document.getElementById('c'), width: W, height: H, dpr: 1, antialias: false });
+const gl = renderer.gl;
+const program = new Program(gl, {
+  vertex: `attribute vec2 position; void main() { gl_Position = vec4(position, 0.0, 1.0); }`,
+  fragment: `precision highp float;
+uniform vec2 uRes; uniform float uTime; uniform vec3 uC0, uC1, uC2, uC3;
+float bayer8(vec2 c) {
+  vec2 q = mod(floor(c), 8.0); float v = 0.0;
+  { float x = floor(q.x / 4.0), y = floor(q.y / 4.0); v += (2.0*x + 3.0*y - 4.0*x*y); }
+  { float x = mod(floor(q.x / 2.0), 2.0), y = mod(floor(q.y / 2.0), 2.0); v += (2.0*x + 3.0*y - 4.0*x*y) * 4.0; }
+  { float x = mod(q.x, 2.0), y = mod(q.y, 2.0); v += (2.0*x + 3.0*y - 4.0*x*y) * 16.0; }
+  return (v + 0.5) / 64.0;
+}
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  float f = 0.5 + 0.25*sin(uv.x*7.0 + uTime*0.55) + 0.25*sin(uv.y*9.0 - uTime*0.45 + uv.x*3.0);
+  float q = clamp(floor(f * 3.0 + bayer8(gl_FragCoord.xy)), 0.0, 3.0);
+  gl_FragColor = vec4(q < 0.5 ? uC0 : q < 1.5 ? uC1 : q < 2.5 ? uC2 : uC3, 1.0);
+}`,
+  uniforms: { uRes: { value: [W, H] }, uTime: { value: 2 }, uC0: { value: token('--c0') }, uC1: { value: token('--c1') }, uC2: { value: token('--c2') }, uC3: { value: token('--c3') } },
+});
+const mesh = new Mesh(gl, { geometry: new Triangle(gl), program });
+const draw = (t) => { program.uniforms.uTime.value = t; renderer.render({ scene: mesh }); };
+draw(2);
+if (!reduced) requestAnimationFrame(function loop(ms) { if (!document.hidden) draw(ms / 1000); requestAnimationFrame(loop); });
+window.__ready = true;
+</script>
+</body>
+</html>
