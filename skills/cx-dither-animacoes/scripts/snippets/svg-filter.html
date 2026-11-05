@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dither com filtro SVG</title>
+<style>
+  :root { color-scheme: light dark; --page:#f7f7fb; --ink:#14172b; }
+  @media (prefers-color-scheme: dark) { :root { --page:#0c0d16; --ink:#e9ebf8; } }
+  html, body { margin: 0; background: var(--page); color: var(--ink); font: 14px system-ui, sans-serif; }
+  main { padding: 16px; display: grid; gap: 12px; max-width: 640px; }
+  .box { height: 120px; border: 1px solid currentColor; }
+  .ref { background: linear-gradient(90deg, #000, #fff); }
+  /* O filtro é aplicado ao elemento: qualquer conteúdo (imagem, texto, gradiente) vira grão em 1 bit. */
+  .grain { background: linear-gradient(90deg, #000, #fff); filter: url(#grain-dither); }
+</style>
+</head>
+<body>
+<!-- feTurbulence gera ruído; somamos ao conteúdo (arithmetic: k2*src + k3*ruído + k4) e cortamos em 0.5 com discrete.
+     É "dither de ruído branco-ish": barato e sem JS, mas o ruído é de Perlin/fractal (não azul) e muda com o seed e a escala. -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <filter id="grain-dither" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="7" result="noise"/>
+    <!-- ruído -> cinza com ganho 2.5 centrado em 0.5 e alfa 1 (o ruído bruto tem pouca amplitude) -->
+    <feColorMatrix in="noise" type="matrix" values="0.833 0.833 0.833 0 -0.75  0.833 0.833 0.833 0 -0.75  0.833 0.833 0.833 0 -0.75  0 0 0 0 1" result="gray"/>
+    <feComposite in="SourceGraphic" in2="gray" operator="arithmetic" k1="0" k2="1" k3="1" k4="-0.5" result="sum"/>
+    <feComponentTransfer in="sum">
+      <feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/>
+    </feComponentTransfer>
+  </filter>
+</svg>
+<main>
+  <div class="box ref" role="img" aria-label="Referência: gradiente contínuo"></div>
+  <div class="box grain" role="img" aria-label="O mesmo gradiente em grão de 1 bit feito por filtro SVG"></div>
+</main>
+<script>window.__ready = true;</script>
+</body>
+</html>

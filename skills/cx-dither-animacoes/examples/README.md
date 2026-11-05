@@ -1,6 +1,6 @@
 # Exemplos
 
-Sirva a pasta `dither-motion/` por HTTP (file:// quebra textura WebGL e máscaras CSS):
+Sirva a pasta `skills/cx-dither-animacoes/` por HTTP (file:// quebra textura WebGL e máscaras CSS):
 
 ```
 node scripts/verify/serve.mjs . 8790
@@ -42,3 +42,14 @@ Também mudou nos scripts de apoio:
 Geradores de arquivo (Python) que alimentam estes exemplos e `assets/`:
 `scripts/python/dither_anim.py` (GIF/PNG/WebM/MP4 em dither) e `scripts/python/doodle_gen.py` (rabiscos SVG brush/engrave/pixel).
 Veja `scripts/README.md`.
+
+## Núcleo (botão, campo, cena, React)
+
+Também autônomos; sirva por HTTP como os demais. Cada um tem plano B sem WebGL ou com movimento reduzido.
+
+| Arquivo | O que mostra |
+|---------|--------------|
+| `button-brasa.html` | botão Canvas 2D com feixe de luz na borda, variantes Brasa e Placa, tema e cor por token |
+| `dither-field.html` | WebGL2: campo de 4 tons (maré, ondas, chuva), HUD e reserva sem WebGL |
+| `scene-objects.html` | cena em pixel (moeda, pacote, cartão) e 3D leve por SDF com morph |
+| `react-dither-canvas.tsx` (+ `.demo.tsx`, `.demo.html`) | hook e componente React genéricos, seguros em StrictMode |

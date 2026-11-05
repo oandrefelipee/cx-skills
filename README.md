@@ -6,7 +6,7 @@ Skills de agente para Claude Code, Codex, Cursor e outros agentes compatíveis c
 |---|---|
 | [`cx-deploy-pipeline`](skills/cx-deploy-pipeline/SKILL.md) | Leva uma mudança de PR até produção com segurança: lê e tria o CI, trata flaky, mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke e faz rollback. Mantém o host limpo (higiene com teto, CI com Docker rootless, runner multiprojeto). Independe de provedor (adaptador do projeto), com o GitHub como fonte da verdade. Relatório HTML por PR, catálogo de provedores com aprendizados e scripts sem dependência. |
 | [`cx-actionable-ui`](skills/cx-actionable-ui/SKILL.md) | Torna telas de produto orientadas a ação: menos texto, uma ação primária, estado em selo, ajuda em ⓘ. Planeja por blocos e wireframe ASCII antes de escrever, com orçamento de palavras e regras anti-slop. Princípios, 14 leis de UX, 30 técnicas, matriz de tom, bibliografia, guia visual e scripts. |
-| [`dither-motion`](skills/dither-motion/SKILL.md) | Dither (ordered/Bayer) parado ou animado, em WebGL/shader, Canvas 2D, SVG e Python: fundos, gradient-map, hachura, transições, ilustração procedural, pixel-art e dinheiro em dither. Mini workflows, scripts, 9 exemplos HTML, bibliotecas, aprendizados e ideias de cenas (cofre, impressora de dinheiro, notas, fundo, gráfico) para se inspirar. |
+| [`cx-dither-animacoes`](skills/cx-dither-animacoes/SKILL.md) | Cria, recria e adapta efeitos em dither, pixel art, halftone, hachura e grão, parados ou animados: botão com feixe de luz, fundos de campo, cenas de objetos, 3D leve por SDF, gráficos, celebração, transição pixelada, tingir por paleta, rabiscos, imagem para dither e animação em arquivo (GIF, WebM). Canvas 2D, WebGL2/shader, CSS/SVG, React e Python; cor ligada aos tokens do projeto, movimento reduzido, plano B sem WebGL e prova por captura. 11 workflows, 22 referências, 12 snippets de stack, 13 exemplos em HTML, scripts Node e Python sem instalar nada. |
 
 ## Instalar
 
@@ -17,9 +17,9 @@ npx skills add oandrefelipee/cx-skills
 Só uma skill:
 
 ```bash
-npx skills add oandrefelipee/cx-skills --skill dither-motion
 npx skills add oandrefelipee/cx-skills --skill cx-actionable-ui
 npx skills add oandrefelipee/cx-skills --skill cx-deploy-pipeline
+npx skills add oandrefelipee/cx-skills --skill cx-dither-animacoes
 ```
 
 ## O que vem na `cx-actionable-ui`
@@ -86,6 +86,31 @@ node skills/cx-deploy-pipeline/scripts/checar-links.mjs
 node skills/cx-deploy-pipeline/scripts/redigir.test.mjs
 ```
 
+## O que vem na `cx-dither-animacoes`
+
+Divulgação progressiva: `SKILL.md` com as decisões (stack, dispositivos, cor padrão), a árvore de decisão, os pedidos que viram arquivo ou script, mini workflows (W1 a W10), a galeria de inspiração "escolha na hora" e o adaptador; depois o item de que o pedido precisa.
+
+```
+skills/cx-dither-animacoes/
+  SKILL.md                    decisões, árvore de decisão, tabela de workflows, galeria, adaptador
+  workflows/                  11: imagem para dither · fundo animado · transição pixelada · tingir por paleta ·
+                              ilustração procedural · pixel-art nativa · rabiscos · halftone e hachura ·
+                              animação em arquivo · hero completo · verificar responsivo
+  references/                 receitas (18, com código) · algoritmos · stack e libs · animação e performance ·
+                              acessibilidade e movimento reduzido · prova e captura · armadilhas ·
+                              workflow de referências · fórmulas, WebGL, Canvas 2D, SVG/CSS, Python, paletas,
+                              estilos, ideias de cenas · adaptador-modelo.md
+  examples/                   13 HTMLs autônomos + hook React (índice em examples/README.md)
+  scripts/                    Node: capture · fps-probe · dither-image · bayer · blue-noise · resolve-tokens ·
+                              frame-stability · shader-playground · 12 snippets de stack
+                              Python: dither_image · dither_anim · procedural_sticker · doodle_gen · palette_tools · make_sheet
+                              JS: dither-gl · dither-canvas · svg-tone-filter · doodle-mask · motion-helpers
+                              verify: serve · shots · check-layout
+  assets/ · evals/            imagens de apoio e 12 pedidos de teste (formato do skill-creator)
+```
+
+Teste dos scripts Node: `node skills/cx-dither-animacoes/scripts/selftest.mjs`. Python 3 com Pillow e numpy para os scripts Python.
+
 ## Como contribuir
 
 1. Crie ou edite o `.md` do item em `references/principios/`, `leis/` ou `tecnicas/`, seguindo o formato de um item existente, e ponha o link no `INDEX.md` da pasta. Fontes novas vão em `references/livros.md`.
@@ -107,6 +132,7 @@ As skills são genéricas. Cada projeto pluga as regras próprias num adaptador 
 | Skill | Adaptador | Modelo |
 |---|---|---|
 | `cx-actionable-ui` | `docs/design/ui-acao/README.md` | [`adaptador-modelo.md`](skills/cx-actionable-ui/references/adaptador-modelo.md) |
+| `cx-dither-animacoes` | `.cx/dither/adaptador.md` (ou `docs/design/dither-animacoes/`) | [`adaptador-modelo.md`](skills/cx-dither-animacoes/references/adaptador-modelo.md) |
 | `cx-deploy-pipeline` | `.cx/pipeline/adaptador.json` (ou referência no `AGENTS.md`, ou `docs/deploy/pipeline/`) | [`adaptador-modelo.md`](skills/cx-deploy-pipeline/references/adaptador-modelo.md) |
 
 A pasta `.cx/` na raiz é o lugar comum para os adaptadores de todas as skills `cx-*`.

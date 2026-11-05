@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playground de shader em dither</title>
+<meta name="description" content="WebGL2 em um único arquivo, sem bibliotecas: Bayer 8x8, ruído azul, halftone e SDF com dither, cores lidas de variáveis CSS.">
+<!--
+  shader-playground.html — WebGL2, um único arquivo, sem bibliotecas.
+
+  O que é:
+    um fragment shader de tela cheia, com um prelúdio de dither (Bayer 8x8 procedural, textura de ruído azul, 4 tons vindos de
+    variáveis CSS) e um editor ao vivo. Copie o código de um preset para o seu projeto: o prelúdio é o que importa.
+
+  Parâmetros de URL (úteis para captura automática):
+    ?preset=0..3   escolhe o preset            ?cell=4      célula de dither em px CSS (1..16)
+    ?t=1.5         congela o tempo (segundos)  ?panel=0     esconde o painel (só o canvas)
+    ?theme=dark|light  força o tema            ?mouse=0.3,0.6  posição do ponteiro (0..1, origem embaixo à esquerda)
+
+  Cores: o shader NÃO tem cor fixa. Ele lê --c0..--c3 do :root com getComputedStyle (resolve var(), color-mix(), oklch(),
+  light-dark()...) e reenvia ao shader quando o tema, o atributo data-theme ou o estilo inline mudam. Troque os quatro valores
+  no CSS abaixo (ou ligue-os aos tokens do seu projeto) e o dither muda junto.
+
+  Acessibilidade: canvas com role="img" e rótulo; prefers-reduced-motion deixa o quadro parado (o botão "Tocar" é uma escolha
+  explícita da pessoa); pausa com a aba oculta e quando o canvas sai da tela; foco visível; erros do shader em role="alert".
+
+  Honestidade: testado em Chromium com SwiftShader (WebGL por software). Isso prova que o código compila e desenha certo;
+  NÃO prova desempenho em GPU real nem em celulares.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    /* Tons do dither, do "fundo" (c0) ao "destaque" (c3). No claro, a rampa é tinta sobre papel. */
+    --c0: #eef0fb;
+    --c1: #a9b7f0;
+    --c2: #5a72d4;
+    --c3: #1b2766;
+    /* Cromo da página (também tokens, nada de cor solta nos componentes) */
+    --bg: #f7f7fb;
+    --fg: #14172b;
+    --muted: #4b5170;
+    --line: #c9cde3;
+    --panel: #ffffff;
+    --accent: #2a47d6;
+    --danger: #b00020;
+    --gutter: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --c0: #090a13; --c1: #1f2c78; --c2: #5f79e8; --c3: #f1ecd9;
+      --bg: #0c0d16; --fg: #e9ebf8; --muted: #a2a8c8; --line: #2a2e48; --panel: #121426; --accent: #8fa2ff; --danger: #ff8a9b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --c0: #090a13; --c1: #1f2c78; --c2: #5f79e8; --c3: #f1ecd9;
+    --bg: #0c0d16; --fg: #e9ebf8; --muted: #a2a8c8; --line: #2a2e48; --panel: #121426; --accent: #8fa2ff; --danger: #ff8a9b;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: var(--gutter); display: grid; gap: var(--gutter); }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 1.15rem; margin: 0; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .9rem; }
+  select, button, input[type=range], textarea, input[type=color] { font: inherit; color: var(--fg); }
+  select, button { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; min-height: 36px; cursor: pointer; }
+  button:hover, select:hover { border-color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=range] { accent-color: var(--accent); min-width: 110px; }
+  input[type=color] { width: 40px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+  .stage { position: relative; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--c0); }
+  canvas#c { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 70vh; image-rendering: pixelated; touch-action: pan-y; }
+  .badge { position: absolute; left: 8px; bottom: 8px; font-size: .78rem; color: var(--fg); background: color-mix(in srgb, var(--bg) 82%, transparent); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .badge:empty { display: none; }
+  .grid { display: grid; gap: var(--gutter); grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .grid { grid-template-columns: 1.25fr 1fr; } }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--panel); min-width: 0; }
+  .card h2 { font-size: .95rem; margin: 0 0 8px; }
+  textarea#src { width: 100%; min-height: 320px; resize: vertical; font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; tab-size: 2; white-space: pre; overflow: auto; }
+  pre { margin: 0; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre#log { color: var(--danger); min-height: 1.4em; }
+  pre#log.ok { color: var(--muted); }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--muted); }
+  .tones { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .swatch { display: inline-flex; align-items: center; gap: 6px; font: 12px ui-monospace, monospace; color: var(--muted); }
+  .note { color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
+  body.nopanel .wrap > header, body.nopanel .grid { display: none; }
+  body.nopanel .wrap { padding: 0; max-width: none; }
+  body.nopanel .stage { border: 0; border-radius: 0; }
+  body.nopanel canvas#c { max-height: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Playground de shader em dither</h1>
+    <div class="controls">
+      <label>Preset
+        <select id="preset" aria-label="Preset do shader"></select>
+      </label>
+      <label>Célula <input id="cell" type="range" min="1" max="12" step="1" value="4" aria-label="Tamanho da célula em px CSS"><output id="cellOut" for="cell">4 px</output></label>
+      <label>Tema
+        <select id="theme" aria-label="Tema">
+          <option value="auto">Automático</option>
+          <option value="light">Claro</option>
+          <option value="dark">Escuro</option>
+        </select>
+      </label>
+      <button id="play" type="button" aria-pressed="true">Pausar</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <canvas id="c" role="img" aria-label="Prévia do shader"></canvas>
+    <span class="badge" id="badge" aria-live="polite"></span>
+  </div>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-edit">
+      <h2 id="h-edit">Fragment shader (edite: compila ao vivo)</h2>
+      <label class="sr-only" for="src">Código do fragment shader</label>
+      <textarea id="src" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+      <pre id="log" class="ok" role="alert" aria-live="assertive">pronto</pre>
+      <p class="note">Defina <code>void mainImage(out vec4 o, in vec2 fc)</code>. <code>fc</code> é <code>gl_FragCoord.xy</code>. Entradas: <code>uRes</code>, <code>uTime</code>, <code>uMouse</code>, <code>uCell</code>, <code>uFrame</code>, <code>uTemporal</code>.</p>
+      <details><summary>Prelúdio (somente leitura): Bayer 8x8, ruído azul, tons</summary><pre id="prelude"></pre></details>
+    </section>
+    <section class="card" aria-labelledby="h-tok">
+      <h2 id="h-tok">Tokens de cor lidos do CSS</h2>
+      <div class="tones" id="tones"></div>
+      <p class="note">O JavaScript lê <code>--c0..--c3</code> com <code>getComputedStyle</code> e reenvia ao shader ao trocar tema, atributo <code>data-theme</code> ou estilo do <code>:root</code>. Trocar uma cor abaixo só define a variável no <code>:root</code>.</p>
+      <p class="note"><button id="reset" type="button">Restaurar tokens</button></p>
+      <details open><summary>Sobre este preset</summary><p class="note" id="about"></p></details>
+      <p class="note" id="motion"></p>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------------------------------------------------------------
+// Prelúdio GLSL ES 3.00. Tudo que o código do usuário (os presets) pode usar.
+// ---------------------------------------------------------------------------------------------------------------------
+const PRELUDE = `#version 300 es
+precision highp float;
+precision highp int;
+uniform vec2 uRes;          // tamanho do canvas em pixels (no modo "cell" já é a grade de células)
+uniform float uTime;        // segundos
+uniform vec2 uMouse;        // 0..1, origem embaixo à esquerda
+uniform float uCell;        // tamanho da célula em px do canvas (1 no modo "cell", cell*dpr no modo "full")
+uniform int uFrame;         // contador a 12 quadros por segundo (para ruído temporal)
+uniform float uTemporal;    // 0 ou 1
+uniform vec3 uC0, uC1, uC2, uC3;   // 4 tons vindos de --c0..--c3 (sRGB 0..1)
+uniform sampler2D uBlue;    // ruído azul 64x64, R32F, valores em (0,1)
+out vec4 outColor;
+
+// Bayer 8x8 procedural (mesma função que scripts/bayer.mjs gera e o selftest confere). c = coordenada de célula.
+float bayer8(vec2 c) {
+  vec2 q = mod(floor(c), 8.0);
+  float v = 0.0;
+  { float xb = mod(floor(q.x / 4.0), 2.0), yb = mod(floor(q.y / 4.0), 2.0); v += (2.0 * xb + 3.0 * yb - 4.0 * xb * yb) * 1.0; }
+  { float xb = mod(floor(q.x / 2.0), 2.0), yb = mod(floor(q.y / 2.0), 2.0); v += (2.0 * xb + 3.0 * yb - 4.0 * xb * yb) * 4.0; }
+  { float xb = mod(q.x, 2.0), yb = mod(q.y, 2.0); v += (2.0 * xb + 3.0 * yb - 4.0 * xb * yb) * 16.0; }
+  return (v + 0.5) / 64.0;
+}
+// Ruído azul: limiar em (0,1) por célula (a textura repete sem emenda).
+float blueNoise(vec2 cell) { return texelFetch(uBlue, ivec2(mod(floor(cell), 64.0)), 0).r; }
+// Ruído de interleaved gradient (Jimenez 2014): azul "barato", sem textura.
+float ign(vec2 c) { return fract(52.9829189 * fract(dot(c, vec2(0.06711056, 0.00583715)))); }
+
+vec3 pick(float q) { return q < 0.5 ? uC0 : q < 1.5 ? uC1 : q < 2.5 ? uC2 : uC3; }
+// Quantiza lum (0..1) em 4 tons com o limiar thr (0..1). floor(lum*3 + thr): acende a faixa de cima com prob. = parte fracionária.
+vec3 ditherTone4(float lum, float thr) { return pick(clamp(floor(clamp(lum, 0.0, 1.0) * 3.0 + thr), 0.0, 3.0)); }
+vec2 cellId(vec2 fc) { return floor(fc / uCell); }
+vec2 cellCenter(vec2 fc) { return (floor(fc / uCell) + 0.5) * uCell; }
+mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+float hash21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+`;
+const EPILOGUE = `
+void main() { mainImage(outColor, gl_FragCoord.xy); }
+`;
+const PRELUDE_LINES = PRELUDE.split("\n").length - 1;
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Presets. res: "cell" = o canvas tem 1 pixel por célula (barato) e o CSS amplia com image-rendering: pixelated;
+//              "full" = o canvas tem a resolução do dispositivo e o shader usa uCell (necessário para bordas suaves, como o halftone).
+// ---------------------------------------------------------------------------------------------------------------------
+const PRESETS = [
+{
+  id: "ondas-bayer", name: "Campo de ondas Bayer", res: "cell",
+  about: "Campo suave de senos, quantizado em 4 tons pelo limiar Bayer 8x8. É o fundo clássico de dither: campo suave quantizado em 4 tons. Mova o ponteiro: uma onda nasce ali.",
+  code: `// Campo de ondas quantizado em 4 tons por Bayer 8x8.
+void mainImage(out vec4 o, in vec2 fc) {
+  vec2 uv = cellCenter(fc) / uRes;                 // 0..1 no centro da célula
+  float asp = uRes.x / uRes.y;
+  vec2 p = (uv - 0.5) * vec2(asp, 1.0);
+  float t = uTime;
+  float f = 0.5 + 0.25 * sin(p.x * 7.0 + t * 0.55) + 0.25 * sin(p.y * 9.0 - t * 0.45 + p.x * 3.0);
+  vec2 m = (uMouse - 0.5) * vec2(asp, 1.0);        // onda a partir do ponteiro
+  float d = length(p - m);
+  f += 0.35 * exp(-d * d * 14.0) * (0.5 + 0.5 * sin(d * 38.0 - t * 3.0));
+  f *= 1.0 - 0.45 * pow(length(p) * 1.1, 3.0);    // vinheta
+  o = vec4(ditherTone4(f, bayer8(cellId(fc))), 1.0);
+}
+`,
+},
+{
+  id: "halftone", name: "Halftone rotacionado", res: "full",
+  about: "Duas telas de pontos com ângulos diferentes (15° e 45°), como em impressão: o raio do ponto cresce com a raiz da luminância. Pontos têm borda suave, por isso este preset renderiza na resolução do dispositivo e usa uCell como passo da tela.",
+  code: `// Halftone: pontos com área proporcional à luminância, duas telas rotacionadas.
+float dotLayer(vec2 fc, float angle, float pitch, float cover) {
+  vec2 g = rot(angle) * fc / pitch;
+  float d = length(fract(g) - 0.5);                 // 0 no centro do ponto, ~0.7 nos cantos
+  float r = 0.7071 * sqrt(clamp(cover, 0.0, 1.0));  // raio ~ sqrt(cobertura)
+  float aa = 1.2 / pitch;
+  return 1.0 - smoothstep(r - aa, r + aa, d);
+}
+void mainImage(out vec4 o, in vec2 fc) {
+  float asp = uRes.x / uRes.y;
+  vec2 p = (fc / uRes - 0.5) * vec2(asp, 1.0);
+  float t = uTime;
+  vec2 b = vec2(sin(t * 0.3) * 0.45, cos(t * 0.27) * 0.18);
+  float f = 0.5 + 0.30 * sin(p.x * 5.0 + t * 0.4) * cos(p.y * 4.0 - t * 0.3)
+          + 0.25 * sin(length(p - b) * 9.0 - t);
+  f = clamp(f, 0.0, 1.0);
+  float pitch = uCell * 3.0;
+  float a = dotLayer(fc, 0.2618, pitch, f);         // 15 graus, tom médio
+  float b2 = dotLayer(fc, 0.7854, pitch, f * f);    // 45 graus, só nas sombras
+  vec3 col = uC0;
+  col = mix(col, uC2, a);
+  col = mix(col, uC3, b2);
+  o = vec4(col, 1.0);
+}
+`,
+},
+{
+  id: "sdf-esfera", name: "SDF esfera 3D com dither", res: "cell",
+  about: "Raymarching de uma esfera, um toro e um chão (SDF), com luz que gira e sombra suave. A luminância final passa pelo mesmo Bayer 8x8 em tela. O dither fica fixo na tela, não na superfície: veja 'dither em movimento' em references/algoritmos.md. Mova o ponteiro para orbitar a câmera.",
+  code: `// SDF: esfera + toro (raymarching) + chão (plano analítico), Lambert com sombra suave, 4 tons por Bayer 8x8.
+// O chão é analítico de propósito: marchar o plano com o resto da cena gasta passos demais em raios rasantes.
+float sdTorus(vec3 p, vec2 t) { return length(vec2(length(p.xz) - t.x, p.y)) - t.y; }
+float map(vec3 p) {
+  float t = uTime;
+  float sph = length(p - vec3(0.0, 0.15 + 0.12 * sin(t * 0.9), 0.0)) - 0.85;
+  vec3 q = p; q.xz *= rot(t * 0.35); q.yz *= rot(0.9);
+  return min(sph, sdTorus(q, vec2(1.45, 0.16)));
+}
+vec3 calcNormal(vec3 p) {
+  vec2 e = vec2(0.002, 0.0);
+  return normalize(vec3(map(p + e.xyy) - map(p - e.xyy), map(p + e.yxy) - map(p - e.yxy), map(p + e.yyx) - map(p - e.yyx)));
+}
+float softShadow(vec3 ro, vec3 rd) {
+  float res = 1.0, t = 0.03;
+  for (int i = 0; i < 24; i++) {
+    float h = map(ro + rd * t);
+    res = min(res, 8.0 * h / t);
+    t += clamp(h, 0.02, 0.4);
+    if (res < 0.001 || t > 6.0) break;
+  }
+  return clamp(res, 0.0, 1.0);
+}
+void mainImage(out vec4 o, in vec2 fc) {
+  vec2 p = (cellCenter(fc) - 0.5 * uRes) / uRes.y;
+  vec3 ro = vec3(0.0, 1.5, 5.2);
+  ro.yz *= rot((uMouse.y - 0.5) * 0.8);
+  ro.xz *= rot((uMouse.x - 0.5) * 2.4);
+  vec3 ta = vec3(0.0, -0.2, 0.0);
+  vec3 ww = normalize(ta - ro), uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0))), vv = cross(uu, ww);
+  vec3 rd = normalize(p.x * uu + p.y * vv + 1.7 * ww);
+  vec3 L = normalize(vec3(cos(uTime * 0.4) * 2.2, 2.4, 1.6 + sin(uTime * 0.4)));
+  float floorY = -1.15;
+  float tf = rd.y < -0.001 ? (ro.y - floorY) / -rd.y : 1e9;   // onde o raio cruza o chão
+  float tMax = min(tf, 16.0);
+  float t = 0.0; bool hitObj = false;
+  for (int i = 0; i < 64; i++) {
+    float d = map(ro + rd * t);
+    if (d < 0.001) { hitObj = true; break; }
+    t += d;
+    if (t >= tMax) break;
+  }
+  float bg = 0.04 + 0.12 * (1.0 - length(p) * 1.1);            // fundo com vinheta
+  float lum = bg;
+  if (hitObj) {
+    vec3 pos = ro + rd * t, n = calcNormal(pos);
+    float dif = max(dot(n, L), 0.0) * softShadow(pos + n * 0.01, L);
+    float rim = pow(1.0 - max(dot(n, -rd), 0.0), 3.0) * 0.22;
+    lum = 0.07 + 0.88 * dif + rim;
+  } else if (tf < 16.0) {
+    vec3 pos = ro + rd * tf;
+    float dif = L.y * softShadow(pos + vec3(0.0, 0.01, 0.0), L);
+    lum = mix(bg, 0.06 + 0.8 * dif, exp(-0.11 * tf));            // neblina: o chão some no fundo
+  }
+  o = vec4(ditherTone4(lum, bayer8(cellId(fc))), 1.0);
+}
+`,
+},
+{
+  id: "ruido-azul", name: "Ruído azul animado", res: "cell",
+  about: "Anéis suaves limiarizados contra uma textura de ruído azul (void-and-cluster, gerada em JS na primeira vez, ~0,5 s). Com 'ruído temporal' ligado, o limiar anda por fract(n + frame * 0.618…) a 12 quadros por segundo: o grão muda a cada quadro mas continua azul, e a média no tempo converge para o valor certo. Desligado, o padrão é fixo.",
+  code: `// Ruído azul: limiar por textura; com uTemporal o limiar anda pela razão áurea a cada quadro.
+void mainImage(out vec4 o, in vec2 fc) {
+  vec2 id = cellId(fc);
+  float asp = uRes.x / uRes.y;
+  vec2 p = (cellCenter(fc) / uRes - 0.5) * vec2(asp, 1.0);
+  float r = length(p);
+  float f = 0.5 + 0.5 * sin(r * 11.0 - uTime * 1.2);
+  f = mix(f, 0.5 + 0.5 * sin(p.x * 6.0 + p.y * 3.0 + uTime * 0.5), 0.35);
+  f *= smoothstep(0.95, 0.2, r);                    // some nas bordas
+  float n = blueNoise(id);
+  float thr = uTemporal > 0.5 ? fract(n + float(uFrame) * 0.61803398875) : n;
+  o = vec4(ditherTone4(f, thr), 1.0);
+}
+`,
+},
+];
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Ruído azul por void-and-cluster (mesmo algoritmo de scripts/blue-noise.mjs), só na primeira vez que um preset pede.
+// ---------------------------------------------------------------------------------------------------------------------
+function blueNoise(n, seed) {
+  const N = n * n, sigma = 1.5, R = Math.ceil(sigma * 3);
+  const kernel = [];
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) kernel.push([dx, dy, Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma))]);
+  const E = new Float64Array(N), bp = new Uint8Array(N);
+  const add = (i, s) => { const x0 = i % n, y0 = (i / n) | 0; for (const [dx, dy, w] of kernel) E[((((y0 + dy) % n) + n) % n) * n + (((x0 + dx) % n) + n) % n] += s * w; };
+  const setBit = (i, on) => { bp[i] = on ? 1 : 0; add(i, on ? 1 : -1); };
+  const tight = () => { let b = -1, v = -Infinity; for (let i = 0; i < N; i++) if (bp[i] && E[i] > v) { v = E[i]; b = i; } return b; };
+  const void_ = () => { let b = -1, v = Infinity; for (let i = 0; i < N; i++) if (!bp[i] && E[i] < v) { v = E[i]; b = i; } return b; };
+  let a = seed >>> 0;
+  const rnd = () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const order = Array.from({ length: N }, (_, i) => i);
+  for (let i = N - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  const K = Math.max(1, Math.round(N / 10));
+  for (let i = 0; i < K; i++) setBit(order[i], true);
+  for (let g = 0; g < 4 * N; g++) { const c = tight(); setBit(c, false); const v = void_(); setBit(v, true); if (v === c) break; }
+  const initial = Uint8Array.from(bp);
+  const ranks = new Float32Array(N);
+  let ones = 0; for (let i = 0; i < N; i++) ones += bp[i];
+  for (let r = ones - 1; r >= 0; r--) { const c = tight(); setBit(c, false); ranks[c] = r; }
+  E.fill(0); bp.fill(0);
+  for (let i = 0; i < N; i++) if (initial[i]) setBit(i, true);
+  for (let r = ones; r < N; r++) { const v = void_(); setBit(v, true); ranks[v] = r; }
+  for (let i = 0; i < N; i++) ranks[i] = (ranks[i] + 0.5) / N;   // limiar em (0,1)
+  return ranks;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// WebGL2
+// ---------------------------------------------------------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const canvas = $("c"), logEl = $("log"), badge = $("badge");
+const params = new URLSearchParams(location.search);
+const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, powerPreference: "default" });
+const state = {
+  ready: false, preset: 0, cell: 4, playing: true, frozenT: params.has("t") ? Number(params.get("t")) : null,
+  t0: null, tNow: 0, visible: true, temporal: true, program: null, blueReady: false, raf: 0, frames: 0, mouse: [0.5, 0.5],
+  mode: "cell", userOverride: false, mouseLocked: false,
+};
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+
+function fail(msg) {
+  logEl.className = "";
+  logEl.textContent = msg;
+  canvas.setAttribute("aria-label", "Prévia indisponível: " + msg);
+}
+
+if (!gl) {
+  fail("WebGL2 indisponível neste navegador. O resto da página continua funcionando, mas não há prévia.");
+  canvas.style.background = "var(--c0)";
+} else {
+  init();
+}
+
+function init() {
+  // geometria: um triângulo que cobre a tela
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const VERT = "#version 300 es\nlayout(location=0) in vec2 p;void main(){gl_Position=vec4(p,0.,1.);}";
+
+  // textura de ruído azul (1x1 até ficar pronta)
+  const tex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  const setBlue = (n, data) => {
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, n, n, 0, gl.RED, gl.FLOAT, data);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  };
+  setBlue(1, new Float32Array([0.5]));
+  let blueRequested = false;
+  const ensureBlue = () => {
+    if (blueRequested) return;
+    blueRequested = true;
+    badge.textContent = "gerando ruído azul…";
+    setTimeout(() => {
+      const t0 = performance.now();
+      const data = blueNoise(64, 1);
+      setBlue(64, data);
+      state.blueReady = true;
+      badge.textContent = "";
+      console.info(`ruído azul 64x64 gerado em ${Math.round(performance.now() - t0)} ms`);
+      draw();
+    }, 30);
+  };
+
+  // tons a partir dos tokens CSS
+  const probe = document.createElement("canvas");
+  probe.width = probe.height = 1;
+  const pctx = probe.getContext("2d", { willReadFrequently: true });
+  const swatchEl = document.createElement("span");
+  swatchEl.style.cssText = "position:absolute;width:0;height:0;visibility:hidden";
+  document.body.appendChild(swatchEl);
+  function cssColorToRgb(name) {
+    swatchEl.style.color = "";
+    swatchEl.style.color = `var(${name}, magenta)`;
+    const computed = getComputedStyle(swatchEl).color;       // já resolve var(), color-mix(), oklch(), light-dark()
+    pctx.clearRect(0, 0, 1, 1);
+    pctx.fillStyle = "#000";
+    pctx.fillStyle = computed;
+    pctx.fillRect(0, 0, 1, 1);
+    const d = pctx.getImageData(0, 0, 1, 1).data;
+    return [d[0] / 255, d[1] / 255, d[2] / 255];
+  }
+  const hex = (rgb) => "#" + rgb.map((v) => Math.round(v * 255).toString(16).padStart(2, "0")).join("");
+  let tones = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const tonesEl = $("tones");
+  for (let i = 0; i < 4; i++) {
+    const wrap = document.createElement("label");
+    wrap.className = "swatch";
+    wrap.innerHTML = `<input type="color" id="tone${i}" aria-label="Tom --c${i}"><span id="toneTxt${i}">--c${i}</span>`;
+    tonesEl.appendChild(wrap);
+    wrap.querySelector("input").addEventListener("input", (e) => {
+      document.documentElement.style.setProperty(`--c${i}`, e.target.value);
+      refreshTones();
+    });
+  }
+  function refreshTones() {
+    tones = [0, 1, 2, 3].map((i) => cssColorToRgb(`--c${i}`));
+    tones.forEach((rgb, i) => { $("tone" + i).value = hex(rgb); $("toneTxt" + i).textContent = `--c${i} ${hex(rgb)}`; });
+    draw();
+  }
+  $("reset").addEventListener("click", () => {
+    [0, 1, 2, 3].forEach((i) => document.documentElement.style.removeProperty(`--c${i}`));
+    refreshTones();
+  });
+  new MutationObserver(() => refreshTones()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "style", "class"] });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshTones);
+
+  // compilação
+  const uniforms = {};
+  function compile(userSrc) {
+    const mk = (type, src) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        const log = gl.getShaderInfoLog(s) || "erro desconhecido";
+        gl.deleteShader(s);
+        const err = new Error(log.replace(/ERROR: 0:(\d+):/g, (_, n) => `linha ${Math.max(1, Number(n) - PRELUDE_LINES)}:`));
+        err.isShader = true;
+        throw err;
+      }
+      return s;
+    };
+    const vs = mk(gl.VERTEX_SHADER, VERT);
+    const fs = mk(gl.FRAGMENT_SHADER, PRELUDE + userSrc + EPILOGUE);
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || "falha ao ligar o programa");
+    const u = {};
+    for (const n of ["uRes", "uTime", "uMouse", "uCell", "uFrame", "uTemporal", "uC0", "uC1", "uC2", "uC3", "uBlue"]) u[n] = gl.getUniformLocation(prog, n);
+    return { prog, u };
+  }
+  function applySource(src) {
+    try {
+      const next = compile(src);
+      if (state.program) gl.deleteProgram(state.program.prog);
+      state.program = next;
+      logEl.className = "ok";
+      logEl.textContent = "compilado";
+      if (/blueNoise\s*\(/.test(src.replace(/\/\/.*$/gm, ""))) ensureBlue();
+      draw();
+      return true;
+    } catch (e) {
+      logEl.className = "";
+      logEl.textContent = e.message;
+      return false;
+    }
+  }
+
+  // tamanho
+  const dprCap = 2;
+  function sizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+    const cssW = Math.max(1, canvas.clientWidth), cssH = Math.max(1, canvas.clientHeight);
+    const cellDev = Math.max(1, Math.round(state.cell * dpr));
+    let w, h, uCell;
+    if (state.mode === "cell") {
+      w = Math.max(1, Math.ceil((cssW * dpr) / cellDev));
+      h = Math.max(1, Math.ceil((cssH * dpr) / cellDev));
+      uCell = 1;
+    } else {
+      w = Math.max(1, Math.round(cssW * dpr));
+      h = Math.max(1, Math.round(cssH * dpr));
+      uCell = cellDev;
+    }
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    canvas.style.imageRendering = state.mode === "cell" ? "pixelated" : "auto";
+    return uCell;
+  }
+
+  function draw() {
+    const P = state.program;
+    if (!P) return;
+    const uCell = sizeCanvas();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.useProgram(P.prog);
+    gl.uniform2f(P.u.uRes, canvas.width, canvas.height);
+    gl.uniform1f(P.u.uTime, state.tNow);
+    gl.uniform2f(P.u.uMouse, state.mouse[0], state.mouse[1]);
+    gl.uniform1f(P.u.uCell, uCell);
+    gl.uniform1i(P.u.uFrame, Math.floor(state.tNow * 12));
+    gl.uniform1f(P.u.uTemporal, state.temporal ? 1 : 0);
+    gl.uniform3fv(P.u.uC0, tones[0]); gl.uniform3fv(P.u.uC1, tones[1]); gl.uniform3fv(P.u.uC2, tones[2]); gl.uniform3fv(P.u.uC3, tones[3]);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(P.u.uBlue, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    state.frames++;
+  }
+
+  // laço de animação
+  function shouldRun() { return state.playing && state.visible && !document.hidden && state.frozenT === null; }
+  function frame(now) {
+    state.raf = 0;
+    if (state.t0 === null) state.t0 = now;
+    state.tNow = (now - state.t0) / 1000;
+    draw();
+    if (shouldRun()) state.raf = requestAnimationFrame(frame);
+  }
+  function kick() {
+    cancelAnimationFrame(state.raf);
+    state.raf = 0;
+    if (state.frozenT !== null) { state.tNow = state.frozenT; draw(); return; }
+    if (shouldRun()) {
+      // mantém o tempo contínuo ao retomar
+      state.t0 = null;
+      const start = state.tNow;
+      state.raf = requestAnimationFrame((now) => { state.t0 = now - start * 1000; frame(now); });
+    } else draw();
+  }
+  document.addEventListener("visibilitychange", kick);
+  new IntersectionObserver(([e]) => { state.visible = e ? e.isIntersecting : true; kick(); }).observe(canvas);
+  new ResizeObserver(() => draw()).observe(canvas);
+
+  // interface
+  const sel = $("preset");
+  PRESETS.forEach((p, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = p.name; sel.appendChild(o); });
+  const src = $("src");
+  $("prelude").textContent = PRELUDE.replace("#version 300 es\n", "");
+  function setPreset(i) {
+    state.preset = i;
+    const p = PRESETS[i];
+    state.mode = p.res;
+    sel.value = String(i);
+    src.value = p.code;
+    $("about").textContent = p.about;
+    canvas.setAttribute("aria-label", `Prévia do shader: ${p.name}, em 4 tons`);
+    applySource(p.code);
+    sizeCanvas();
+    draw();
+  }
+  sel.addEventListener("change", () => setPreset(Number(sel.value)));
+  let debounce = 0;
+  src.addEventListener("input", () => { clearTimeout(debounce); debounce = setTimeout(() => applySource(src.value), 350); });
+
+  const cell = $("cell");
+  const setCell = (v) => { state.cell = v; cell.value = String(v); $("cellOut").textContent = v + " px"; draw(); };
+  cell.addEventListener("input", () => setCell(Number(cell.value)));
+
+  const play = $("play");
+  const syncPlay = () => { play.textContent = state.playing ? "Pausar" : "Tocar"; play.setAttribute("aria-pressed", String(state.playing)); };
+  play.addEventListener("click", () => { state.playing = !state.playing; state.userOverride = true; syncPlay(); kick(); });
+
+  const theme = $("theme");
+  theme.addEventListener("change", () => {
+    if (theme.value === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme.value);
+  });
+
+  // Ponteiro. Cuidado: o Chromium em automação dispara um pointermove falso em (0,0) ao abrir a página; ignoramos esse
+  // evento e, com ?mouse=x,y na URL, travamos o ponteiro para a captura sair sempre igual.
+  const setMouse = (e) => {
+    if (state.mouseLocked) return;
+    if (e.clientX === 0 && e.clientY === 0 && !e.movementX && !e.movementY) return;
+    const r = canvas.getBoundingClientRect();
+    state.mouse = [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / r.height))];
+    if (!shouldRun()) draw();
+  };
+  canvas.addEventListener("pointermove", setMouse);
+  canvas.addEventListener("pointerdown", setMouse);
+
+  // temporal: tecla t alterna (útil no preset de ruído azul)
+  window.addEventListener("keydown", (e) => {
+    if (e.target === src || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if (e.key === "t") { state.temporal = !state.temporal; badge.textContent = "ruído temporal " + (state.temporal ? "ligado" : "desligado") + " (tecla t)"; setTimeout(() => { if (state.blueReady) badge.textContent = ""; }, 1800); if (!shouldRun()) draw(); }
+  });
+
+  // movimento reduzido
+  const motionNote = $("motion");
+  function syncMotion() {
+    if (reduced.matches && !state.userOverride) {
+      state.playing = false;
+      state.tNow = state.frozenT ?? 2.0;
+      motionNote.textContent = "Movimento reduzido ativo no sistema: o quadro está parado. “Tocar” liga a animação por escolha sua.";
+    } else motionNote.textContent = "";
+    syncPlay(); kick();
+  }
+  reduced.addEventListener("change", syncMotion);
+
+  // parâmetros de URL
+  if (params.get("theme") === "dark" || params.get("theme") === "light") { document.documentElement.setAttribute("data-theme", params.get("theme")); theme.value = params.get("theme"); }
+  if (params.get("panel") === "0") document.body.classList.add("nopanel");
+  if (params.has("mouse")) { const m = params.get("mouse").split(",").map(Number); if (m.length === 2 && m.every(Number.isFinite)) { state.mouse = m; state.mouseLocked = true; } }
+  if (params.has("cell")) state.cell = Math.min(16, Math.max(1, Number(params.get("cell")) || 4));
+  setCell(state.cell);
+  refreshTones();
+  setPreset(Math.min(PRESETS.length - 1, Math.max(0, Number(params.get("preset")) || 0)));
+  syncMotion();
+  state.ready = true;
+
+  // ganchos para testes automáticos (scripts/capture.mjs, fps-probe.mjs)
+  window.__playground = {
+    get ready() { return state.ready && (state.blueReady || !/blueNoise\s*\(/.test(src.value.replace(/\/\/.*$/gm, ""))); },
+    get frames() { return state.frames; },
+    get time() { return state.tNow; },
+    get tones() { return tones.map((t) => hex(t)); },
+    get mode() { return state.mode; },
+    get size() { return [canvas.width, canvas.height]; },
+    setPreset, setCell, setTheme: (v) => { theme.value = v; theme.dispatchEvent(new Event("change")); },
+    freeze: (s) => { state.frozenT = s; kick(); },
+    setSource: (s) => { src.value = s; return applySource(s); },
+  };
+}
+</script>
+</body>
+</html>

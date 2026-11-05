@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas2D + Bayer</title>
+<style>
+  /* Tokens do "projeto": o código lê só estas variáveis. Troque pelos tokens reais do seu tema. */
+  :root { color-scheme: light dark; --c0:#eef0fb; --c1:#a9b7f0; --c2:#5a72d4; --c3:#1b2766; --page:#f7f7fb; }
+  @media (prefers-color-scheme: dark) { :root { --c0:#090a13; --c1:#1f2c78; --c2:#5f79e8; --c3:#f1ecd9; --page:#0c0d16; } }
+  html, body { margin: 0; background: var(--page); }
+  canvas, svg { display: block; }
+  canvas { width: 640px; max-width: 100%; aspect-ratio: 16 / 9; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c" width="160" height="90" aria-label="Campo de ondas em dither Bayer" role="img"></canvas>
+<script type="module">
+// Canvas2D puro: 1 pixel do canvas = 1 célula; o CSS amplia com image-rendering: pixelated.
+const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+const token = (name) => {                      // '--c0' -> [r, g, b] em 0..1
+  const el = document.body.appendChild(document.createElement('i'));
+  el.style.color = `var(${name})`;
+  probe.canvas.width = probe.canvas.height = 1;
+  probe.fillStyle = '#000'; probe.fillStyle = getComputedStyle(el).color; probe.fillRect(0, 0, 1, 1);
+  el.remove();
+  return [...probe.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((v) => v / 255);
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;   // quadro parado se a pessoa pediu menos movimento
+const tones = [0, 1, 2, 3].map((i) => token(`--c${i}`).map((v) => Math.round(v * 255)));
+const bayer = (x, y) => {                      // Bayer 8x8 em forma fechada (ver bayer.mjs)
+  let v = 0;
+  for (let b = 0; b < 3; b++) { const bit = 2 - b, xb = (x >> bit) & 1, yb = (y >> bit) & 1; v += (2*xb + 3*yb - 4*xb*yb) * 4 ** b; }
+  return (v + 0.5) / 64;
+};
+const c = document.getElementById('c'), ctx = c.getContext('2d'), img = ctx.createImageData(c.width, c.height);
+function draw(t) {
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+    const u = x / c.width, v = y / c.height;
+    const f = 0.5 + 0.25 * Math.sin(u * 7 + t * 0.55) + 0.25 * Math.sin(v * 9 - t * 0.45 + u * 3);
+    const q = Math.min(3, Math.floor(f * 3 + bayer(x & 7, y & 7)));
+    img.data.set([...tones[q], 255], (y * c.width + x) * 4);
+  }
+  ctx.putImageData(img, 0, 0);
+}
+draw(2);
+if (!reduced) (function loop(ms) { if (!document.hidden) draw(ms / 1000); requestAnimationFrame(loop); })(0);
+window.__ready = true;
+</script>
+</body>
+</html>
