@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FLIP por slots entre duas páginas</title>
+<!--
+  DEMONSTRA: flipSlots() - objetos vivem numa camada acima das páginas e MIGRAM entre "slots" medidos
+  (<i data-slot="nome">) quando a página muda; spring por objeto (fallback rAF se a lib Motion não
+  carregar) e, opcionalmente, entrada em dissolve Bayer desenhada por DitherGL (modo 'passthrough').
+  Um objeto sem slot na página destino encolhe e some; o que estava oculto entra com "pop".
+  USA: ../scripts/js/motion-helpers.js (flipSlots, spring, sleep) e ../scripts/js/dither-gl.js (DitherGL, loadImage)
+  Motion via CDN fica DESLIGADO por padrão (window.DITHER_MOTION_CDN=false); abra com ?cdn=1 para tentar.
+-->
+<style>
+  :root { --bg:#1235E6; --navy:#0A1A7A; --ink:#F5F7FF; --accent:#FFE24A; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--navy); color: var(--ink); font: 400 16px/1.5 system-ui, sans-serif; }
+  .wrap { max-width: 720px; height: 100svh; margin: 0 auto; display: flex; flex-direction: column; background: var(--bg); }
+  .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  .page { position: absolute; inset: 0; padding: 24px 20px; display: flex; flex-direction: column; gap: 12px; visibility: hidden; }
+  .page.on { visibility: visible; }
+  .page .txt { position: relative; z-index: 3; }
+  h1 { font: 800 28px/1.1 system-ui, sans-serif; margin: 0 0 6px; }
+  p { margin: 0; color: #C3CCFF; font-size: 15px; }
+  .slots { flex: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 20px; }
+  .slots i { display: block; flex: none; }
+  #p1 .big { width: 150px; height: 150px; } #p1 .small { width: 84px; height: 84px; }
+  #p2 .big { width: 130px; height: 130px; } #p2 .small { width: 72px; height: 72px; }
+  .layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+  .obj { position: absolute; left: 0; top: 0; width: 400px; height: 400px; transform-origin: center; visibility: hidden; will-change: transform; }
+  .obj canvas, .obj img { width: 400px; height: 400px; display: block; }
+  .bar { padding: 14px 20px 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #0C27B4; }
+  button { min-height: 48px; padding: 0 22px; border: 0; background: var(--accent); color: var(--navy); font: 800 16px system-ui, sans-serif; cursor: pointer; box-shadow: 0 4px 0 #B8932A; }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #B8932A; }
+  button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px #5B78FF; }
+  /* checkbox acessivel: o input cobre o rotulo inteiro (alvo >= 44 px) e o quadrado e desenhado no span */
+  label { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding-right: 4px; font-size: 14px; cursor: pointer; }
+  label input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  label .box { width: 22px; height: 22px; flex: none; background: #0A1A7A; box-shadow: inset 0 0 0 2px #5B78FF; display: grid; place-items: center; }
+  label input:checked + .box { background: var(--accent); box-shadow: none; }
+  label input:checked + .box::after { content: ""; width: 10px; height: 10px; background: var(--navy); }
+  label input:focus-visible + .box { outline: 3px solid var(--ink); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage" id="stage">
+    <section class="page on" id="p1" aria-label="Página 1">
+      <div class="txt"><h1>Página 1</h1><p>Moedas e escudo ficam nos seus slots.</p></div>
+      <div class="slots"><i class="big" data-slot="coin"></i><i class="small" data-slot="shield"></i></div>
+    </section>
+    <section class="page" id="p2" aria-label="Página 2">
+      <div class="txt"><h1>Página 2</h1><p>Os mesmos objetos migram; uma caixa nova entra.</p></div>
+      <div class="slots"><i class="small" data-slot="coin"></i><i class="big" data-slot="shield"></i><i class="small" data-slot="box"></i></div>
+    </section>
+    <div class="layer" id="layer" aria-hidden="true">
+      <div class="obj" data-obj="coin"></div>
+      <div class="obj" data-obj="shield"></div>
+      <div class="obj" data-obj="box"></div>
+    </div>
+  </div>
+  <div class="bar">
+    <button id="go" data-primary>Próxima página</button>
+    <button id="replay" class="ghost">Repetir entrada</button>
+    <label><input type="checkbox" id="dz" checked><span class="box" aria-hidden="true"></span>Dissolve Bayer na entrada</label>
+  </div>
+</div>
+
+<script type="module">
+import { DitherGL, loadImage } from '../scripts/js/dither-gl.js';
+import { flipSlots, spring } from '../scripts/js/motion-helpers.js';
+// Motion (CDN) so com ?cdn=1; senao o spring cai no fallback rAF
+window.DITHER_MOTION_CDN = new URLSearchParams(location.search).has('cdn');
+
+const $ = (s) => document.querySelector(s);
+const SRC = { coin: '../assets/sticker-moedas.png', shield: '../assets/sticker-escudo.png', box: '../assets/sticker-encomenda.png' };
+const objects = {}, gls = {};
+const reveal = (id, v) => gls[id] && gls[id].draw({ mode: 'passthrough', reveal: v, px: 4 });
+
+// monta cada objeto: canvas WebGL (dissolve) se houver WebGL; senao <img> simples
+for (const el of document.querySelectorAll('.obj')) {
+  const id = el.dataset.obj;
+  objects[id] = el;
+  const img = await loadImage(SRC[id]);
+  if (DitherGL.supported()) {
+    const cv = document.createElement('canvas');
+    el.append(cv);
+    const gl = new DitherGL(cv);
+    gl.resize(400, 400).setTexture(img, { premult: true });
+    gls[id] = gl;
+    reveal(id, 1);
+  } else { el.append(img); }
+}
+
+const flip = flipSlots({ layer: $('#layer'), objects, base: 400 });
+const pages = [$('#p1'), $('#p2')];
+let cur = 0, busy = false;
+
+const dissolve = (ids, delay = 0) => $('#dz').checked
+  ? Promise.all(ids.map((id, i) => { reveal(id, 0); return spring(v => reveal(id, v), { duration: 0.8, bounce: 0.1, delay: delay + i * 0.12, steps: 12 }); }))
+  : Promise.resolve();
+
+async function intro() {
+  flip.place(pages[cur]);
+  const vis = Object.keys(objects).filter(id => flip.state[id].s > 0.01);
+  await dissolve(vis);
+}
+
+async function go() {
+  if (busy) return; busy = true;
+  const from = pages[cur], next = pages[1 - cur];
+  const before = new Set(Object.keys(objects).filter(id => flip.state[id].s > 0.01));
+  from.classList.remove('on'); next.classList.add('on'); // visibility so troca; o layout continua medivel
+  const m = flip.measure(next);
+  const entering = Object.keys(m).filter(id => !before.has(id));
+  entering.forEach(id => reveal(id, 0));
+  await Promise.all([
+    flip.goTo(next, { duration: 0.8, bounce: 0.18, stagger: 0.05 }),
+    dissolve(entering, 0.15),
+  ]);
+  entering.forEach(id => reveal(id, 1));
+  cur = 1 - cur;
+  $('#go').textContent = cur ? 'Voltar à página 1' : 'Próxima página';
+  busy = false;
+}
+
+$('#go').addEventListener('click', go);
+$('#replay').addEventListener('click', () => { if (!busy) intro(); });
+addEventListener('resize', () => { if (!busy) flip.place(pages[cur]); });
+await document.fonts?.ready;
+intro();
+window.__flip = { go, flip }; // gancho p/ testes
+</script>
+</body>
+</html>

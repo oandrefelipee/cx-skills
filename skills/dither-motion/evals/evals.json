@@ -1,0 +1,178 @@
+{
+  "skill_name": "dither-motion",
+  "evals": [
+    {
+      "id": 1,
+      "name": "fundo-dither-animado-hero",
+      "prompt": "Preciso de um fundo em dither animado para o hero da landing page da minha startup. A cor da marca e um roxo (#5B2EFF). Tem que ficar leve no celular e nao atrapalhar o titulo branco. Pode ser um HTML autonomo.",
+      "expected_output": "Entrega um HTML executavel por HTTP com fundo Canvas 2D em Bayer 8x8 (baixa resolucao W/CELL, image-rendering: pixelated), 3 tons do mesmo matiz roxo derivados da marca, 12 a 15 fps, pausa com document.hidden e fora da viewport, quadro estatico em prefers-reduced-motion, titulo sobre area calma com contraste >= 4.5:1 e sem dither por cima do texto. Usa ou adapta scripts/js/dither-canvas.js. Verifica por prints em 360x640 e 1280x800 e abre/descreve os prints.",
+      "files": [],
+      "assertions": [
+        "Escolhe Canvas 2D (nao WebGL) como motor do fundo e justifica pela leveza no celular",
+        "Define 3 tons do mesmo matiz derivados de #5B2EFF e informa o contraste do titulo branco contra o tom mais claro",
+        "Limita a 12-15 fps e pausa com document.hidden e IntersectionObserver",
+        "Trata prefers-reduced-motion com um quadro estatico",
+        "Serve por HTTP e verifica com prints em tamanho de celular e desktop, descrevendo o que viu"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "foto-para-pixel-art-4-cores",
+      "prompt": "Converte esta foto de perfil (perfil.png, 1200x1200) em pixel-art de 4 cores estilo Game Boy, em uma grade de 64x64, para eu usar de avatar. Quero tambem uma versao com dither e outra sem.",
+      "expected_output": "Usa scripts/python/dither_image.py com --pixel-grid 64 e paleta de 4 verdes (#0F380F,#306230,#8BAC0F,#9BBC0F) do mais escuro ao mais claro; gera uma versao com bayer8 (dither) e outra posterizada (--amount 0); amplia com NEAREST em fator inteiro; valida a grade (blocos uniformes, 4 cores exatas, alfa binario); entrega prancha comparativa; recomenda image-rendering: pixelated.",
+      "files": [
+        "perfil.png"
+      ],
+      "assertions": [
+        "Usa grade logica de 64 pixels e ampliacao NEAREST em fator inteiro",
+        "Aplica paleta de exatamente 4 cores ordenadas do escuro ao claro",
+        "Gera duas variantes (com dither Bayer e posterizada sem dither) e compara em prancha",
+        "Valida por script blocos uniformes, numero de cores e alfa binario",
+        "Menciona image-rendering: pixelated e multiplos inteiros ao exibir"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "transicao-de-pagina-pixelada",
+      "prompt": "Faca a transicao entre os passos do meu onboarding (3 passos) ser um efeito de pixels que cobre a tela e depois revela o proximo passo, estilo retro. Meu projeto e React com Vite.",
+      "expected_output": "Propoe overlay de dither em tela cheia (modo overlay do DitherGL ou componente equivalente) com t 0->1 cobrindo, troca de passo enquanto coberto, t 1->0 revelando; celula >= 6 css px calculada em unidades de tela (px*DPR/escala); easing em cobrir mais rapido que revelar; fallback por mascara CSS ou corte; reduced-motion = corte seco/fade 150 ms; overlay limpo ao fim e sem bloquear cliques; verificacao forcando o estado (t=0, .5, 1) em vez de screenshot por tempo.",
+      "files": [],
+      "assertions": [
+        "Implementa overlay que cobre, troca o conteudo e revela",
+        "Define o tamanho da celula em unidades de tela, ciente de DPR",
+        "Preve fallback sem WebGL e comportamento em prefers-reduced-motion",
+        "Garante pointer-events: none e limpeza do overlay",
+        "Verifica forcando o estado da transicao, nao por screenshot temporizado"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "tingir-ilustracao-por-paleta",
+      "prompt": "Tenho uma ilustracao em 4 tons de cinza (icone-cinza.png) e quero que o modo escuro do site use uma paleta e o modo claro use outra, trocando so por CSS, sem gerar imagem nova. Pode ser sem WebGL.",
+      "expected_output": "Usa filtro SVG feColorMatrix (luminancia) + feComponentTransfer type=discrete com tableValues por canal, com color-interpolation-filters=\"sRGB\"; gera os tableValues (palette_tools.py svg-tones ou svg-tone-filter.js); troca de paleta por filter:url(#id) ou setTones; avisa que antialias cria tons intermediarios e que a ordem dos tons importa; compara variacoes; checa contraste em ambos os temas.",
+      "files": [
+        "icone-cinza.png"
+      ],
+      "assertions": [
+        "Escolhe filtro SVG com feComponentTransfer discrete em vez de regenerar imagens",
+        "Inclui color-interpolation-filters sRGB e explica por que",
+        "Mostra como trocar a paleta por tema sem regerar a imagem",
+        "Alerta sobre franja de antialias e sobre a ordem dos tons",
+        "Confere contraste em tema claro e escuro"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "ilustracao-procedural-moeda-adesivo",
+      "prompt": "Desenha por codigo uma moeda de ouro e uma pilha de moedas em estilo dither, como adesivos com contorno branco e sombra, para usar sobre um fundo azul #002FFF. Quero tambem uma versao em tons de roxo para o tema alternativo.",
+      "expected_output": "Usa scripts/python/procedural_sticker.py (coin, stack e sticker) com rampas de 4 tons por material (ouro e roxo), Bayer 8x8 em celulas de 4 px, luz de cima a esquerda, contorno de tinta de 3 px, adesivo de 12 px, sombra plana; mesma geometria com duas paletas; prancha com make_sheet.py sobre azul, branco e escuro; abre e descreve a prancha; PNG com alfa.",
+      "files": [],
+      "assertions": [
+        "Usa rampas de 4 tons com Bayer 8x8 em celulas de 4 px",
+        "Aplica contorno de tinta, adesivo branco por dilatacao do alfa e sombra plana",
+        "Gera as duas paletas com a mesma geometria",
+        "Monta prancha sobre azul, branco e escuro e revisa visualmente",
+        "Entrega PNG com transparencia"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "halftone-3d-pedido-vago",
+      "prompt": "Quero um halftone 3D no hero do meu site, tipo revista. Nao sei bem como, so quero que fique bonito e leve.",
+      "expected_output": "Classifica como halftone; pergunta/decide se ha cena 3D real; se nao, propoe halftone 2D (pontos a 45 graus, raio sqrt(dark/pi)) por script ou shader e so recomenda three.js/Paper Shaders se houver cena 3D; menciona o aviso de gosto (hachura/gravura, dither em tudo poluem) e oferece 2 a 3 variacoes pequenas; define fallback, reduced-motion e performance; escolhe o motor mais barato.",
+      "files": [],
+      "assertions": [
+        "Faz uma pergunta curta ou assume com justificativa se ha cena 3D real",
+        "Escolhe o motor mais barato que entrega o look (CSS/Canvas < WebGL < three.js)",
+        "Oferece variacoes pequenas para o gosto incerto em vez de polir uma so",
+        "Define fallback, reduced-motion e orcamento de desempenho",
+        "Descreve a formula do halftone (grade rotacionada, raio proporcional a escuridao)"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "rabiscos-e-realces-em-ui",
+      "prompt": "A tela de checkout do meu app esta muito sem graca. Quero uns detalhes tipo rabisco desenhado apontando pro botao, um sublinhado na palavra 'gratis' e uma sombra pontilhada embaixo do cartao do produto. Nao quero exagerar.",
+      "expected_output": "Limita a 2 a 3 realces; usa rabiscos SVG como mascara CSS com clip-path animado (drawDoodle de doodle-mask.js ou CSS .dd) com currentColor; sublinhado-onda sob a palavra; sombra pontilhada por tile Bayer em CSS ou ditherShadow; relevo de botao opcional; esconde enfeites em tela estreita se cobrirem texto; reduced-motion mostra rabiscos completos; verifica que nada cobre texto ou alvos (check-layout) em 360x640 e 1280x800.",
+      "files": [],
+      "assertions": [
+        "Limita o numero de realces e justifica (dither e tempero)",
+        "Implementa rabiscos como mascara CSS revelada por clip-path com cor trocavel",
+        "Cria a sombra pontilhada de contato com tile Bayer ou helper",
+        "Garante que nenhum realce cobre texto ou alvo de toque e testa em celular",
+        "Respeita prefers-reduced-motion"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "dither-quebrado-diagnostico",
+      "prompt": "Meu shader de dither funciona na minha maquina mas no HTML que abri direto do disco a textura fica preta, e quando redimensiono o objeto o dither fica borrado e as bordas do PNG tem uma franja escura. O que esta errado?",
+      "expected_output": "Diagnostica tres causas com solucao: (1) file:// bloqueia textura WebGL, servir por HTTP (serve.mjs); (2) celula dimensionada pela textura, usar px_canvas = cell*DPR/escala e recalcular a cada quadro; (3) PNG com alfa sem premultiplicar ao usar mipmap, ativar UNPACK_PREMULTIPLY_ALPHA_WEBGL e saida premultiplicada. Cita references/armadilhas.md, pode mencionar generateMipmap em NPOT no WebGL1 e NEAREST para pixel-art, e sugere verificar com shots.cjs e olhar os prints.",
+      "files": [],
+      "assertions": [
+        "Identifica file:// como causa da textura preta e propoe servir por HTTP",
+        "Explica a formula px_canvas = cell*DPR/escala para o dither borrado ao escalar",
+        "Identifica alfa premultiplicado/mipmap como causa da franja escura",
+        "Propoe verificacao com prints e console em vez de afirmar que corrigiu"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "gif-animado-de-logo",
+      "prompt": "Tenho o logo da minha loja em PNG transparente (logo.png, 512x512). Quero um GIF animado em estilo dither/pixel pra usar na assinatura de e-mail e no README, que aparece celula a celula e termina no logo limpo. Tem que ficar leve, menos de 500 KB.",
+      "expected_output": "Usa scripts/python/dither_anim.py no modo reveal (ou pixel-resolve) com paleta/preset, --cell 4, --fps 12 a 20, --duration 1.2-1.8, --hold, --loop 1 ou 0 conforme o destino; explica que o alfa do GIF e de 1 bit (borda nitida, pode haver halo sobre fundo desconhecido) e oferece WebM com alfa/PNG-seq como alternativa, MP4 so com --bg; ajusta --scale/--fps ate caber em 500 KB; confere os quadros em prancha e sobre o fundo real; cita que quadros identicos sao fundidos no GIF; entrega GIF e poster PNG do ultimo quadro.",
+      "files": [
+        "logo.png"
+      ],
+      "assertions": [
+        "Usa dither_anim.py com modo reveal ou pixel-resolve e parametros explicitos de fps, duration, hold e loop",
+        "Explica o limite do alfa de 1 bit do GIF e a alternativa WebM/PNG-seq",
+        "Reduz o tamanho ate a meta (scale, fps, duracao) e informa o tamanho obtido",
+        "Olha os quadros em prancha e testa sobre o fundo do destino",
+        "Entrega tambem um PNG estatico para movimento reduzido"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "conjunto-de-rabiscos-pixel",
+      "prompt": "Preciso de um conjunto de uns 6 rabiscos desenhados a mao em estilo pixel (setas, sublinhado, circulo, faisca, asterisco) em SVG para colorir por CSS no meu site, e quero ver todos juntos antes de escolher.",
+      "expected_output": "Usa scripts/python/doodle_gen.py --style pixel com --only (seta-curva, sublinhado-onda, circulo-aberto, faisca, asterisco, risco-onda ou similares da lista --list), --seed fixo e --contact para a prancha; serve a pasta por HTTP para abrir o index.html; explica que os SVG sao currentColor e se aplicam via mascara CSS + clip-path (doodle-mask.js drawDoodle) com steps(8) e image-rendering: pixelated; recomenda 3 a 5 do mesmo estilo e limitar a 2-3 realces por tela; menciona reduced-motion.",
+      "files": [],
+      "assertions": [
+        "Roda ou instrui doodle_gen.py com --style pixel, --only e --contact",
+        "Serve por HTTP para a prancha de conferencia (mascara CSS exige)",
+        "Mostra como aplicar por mascara CSS e clip-path com steps para animar",
+        "Recomenda um estilo unico e poucos realces por tela",
+        "Trata prefers-reduced-motion"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "halftone-3d-esfera",
+      "prompt": "Quero uma esfera com efeito halftone (pontos que crescem com a luz) que reaja ao mouse, em WebGL, sem carregar three.js. Pode ser uma pagina so.",
+      "expected_output": "Parte de examples/halftone-3d.html: fragment shader com esfera por normal analitica (z = sqrt(1 - r2)), luz difusa vinda do ponteiro, halftone em grade girada 45 graus com a luz amostrada no centro do ponto e raio proporcional a sqrt(luz), tamanho de celula em px de tela (css * DPR), opcao Bayer; desenha sob demanda com movimento reduzido; avisa do serrilhado do halftone na borda da esfera e como mitigar (aa maior, celula menor, anel liso); sugere three.js + passe de tela cheia so se houver cena 3D real; verifica por prints e console servindo por HTTP.",
+      "files": [],
+      "assertions": [
+        "Desenha a esfera inteira no fragment shader sem three.js, com normal analitica",
+        "Amostra a luz no centro da celula girada 45 graus e liga o raio a luz",
+        "Define a celula em pixels de tela considerando DPR",
+        "Menciona o serrilhado na borda e a mitigacao",
+        "Respeita prefers-reduced-motion e verifica servindo por HTTP"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "composicao-de-hero",
+      "prompt": "Monta pra mim a pagina inicial de um app de pagamentos com estilo dither: titulo, subtitulo, botao e uma ilustracao de moedas. Quero que fique com cara de produto serio mas com personalidade, nada poluido, e que funcione bem no celular.",
+      "expected_output": "Parte de examples/hero-completo.html e do workflow hero-completo: define no maximo 2 focos de dither (fundo Canvas 2D em 3 tons do mesmo matiz e entrada do objeto), mantem painel, titulo e botao chapados (relevo por sombra dura), sombra de contato pontilhada, rabisco sob a palavra de destaque, objeto adesivo com alfa; texto nunca sobre dither, contraste >= 4.5:1, alvos >= 44 px; fallback sem WebGL e reduced-motion; verifica com shots.cjs e check-layout.cjs em 360x640, 390x844 e 1280x800 e descreve os prints.",
+      "files": [],
+      "assertions": [
+        "Declara explicitamente os 1 a 2 focos de dither e deixa o resto chapado",
+        "Mantem o texto fora de qualquer dither e confere o contraste",
+        "Inclui fallback sem WebGL e comportamento em prefers-reduced-motion",
+        "Roda check-layout e shots em celular e desktop e descreve o que viu",
+        "Usa o botao primario com data-primary e alvo de pelo menos 44 px"
+      ]
+    }
+  ]
+}

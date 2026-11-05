@@ -6,6 +6,7 @@ Skills de agente para Claude Code, Codex, Cursor e outros agentes compatíveis c
 |---|---|
 | [`cx-deploy-pipeline`](skills/cx-deploy-pipeline/SKILL.md) | Leva uma mudança de PR até produção com segurança: lê e tria o CI, trata flaky, mescla só com check verde, faz deploy com o "pode" humano, verifica health e smoke e faz rollback. Mantém o host limpo (higiene com teto, CI com Docker rootless, runner multiprojeto). Independe de provedor (adaptador do projeto), com o GitHub como fonte da verdade. Relatório HTML por PR, catálogo de provedores com aprendizados e scripts sem dependência. |
 | [`cx-actionable-ui`](skills/cx-actionable-ui/SKILL.md) | Torna telas de produto orientadas a ação: menos texto, uma ação primária, estado em selo, ajuda em ⓘ. Planeja por blocos e wireframe ASCII antes de escrever, com orçamento de palavras e regras anti-slop. Princípios, 14 leis de UX, 30 técnicas, matriz de tom, bibliografia, guia visual e scripts. |
+| [`dither-motion`](skills/dither-motion/SKILL.md) | Dither (ordered/Bayer) parado ou animado, em WebGL/shader, Canvas 2D, SVG e Python: fundos, gradient-map, hachura, transições, ilustração procedural, pixel-art e dinheiro em dither. Mini workflows, scripts, 9 exemplos HTML, bibliotecas, aprendizados e ideias de cenas (cofre, impressora de dinheiro, notas, fundo, gráfico) para se inspirar. |
 
 ## Instalar
 
@@ -16,6 +17,7 @@ npx skills add oandrefelipee/cx-skills
 Só uma skill:
 
 ```bash
+npx skills add oandrefelipee/cx-skills --skill dither-motion
 npx skills add oandrefelipee/cx-skills --skill cx-actionable-ui
 npx skills add oandrefelipee/cx-skills --skill cx-deploy-pipeline
 ```
